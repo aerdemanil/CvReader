@@ -1,6 +1,6 @@
 
-using FastEnpoints;
-using static FastEnpoints.swagger.Extensions;
+using FastEndpoints;
+using static FastEndpoints.Swagger.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints();
