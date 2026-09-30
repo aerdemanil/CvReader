@@ -1,6 +1,6 @@
 ﻿using FastEndpoints;
 
-namespace cvreader.Api.Endpoints.Ping;
+namespace CvReader.Api.Endpoints.Ping;
 
 
 

@@ -10,7 +10,15 @@
   <ItemGroup>
     <PackageReference Include="FastEndpoints" Version="8.3.0" />
     <PackageReference Include="FastEndpoints.Swagger" Version="8.3.0" />
-    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CvReader.Application\CvReader.Application.csproj" />
+    <ProjectReference Include="..\CvReader.Infrastructure\CvReader.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

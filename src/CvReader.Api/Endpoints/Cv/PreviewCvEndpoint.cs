@@ -1,16 +1,20 @@
-using CvReader.Api.Services;
+using CvReader.Application.Cv;
 using FastEndpoints;
 
-namespace CvReader.Api.Endpoints.cv;
+namespace CvReader.Api.Endpoints.Cv;
 
-public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
-
+public class PreviewCvRequest
 {
-    private readonly CvParserService _cvParserService;
+    public IFormFile File { get; set; } = default!;
+}
 
-    public PreviewCvEndpoint(CvParserService cvParserService)
+public class PreviewCvEndpoint : Endpoint<PreviewCvRequest, ParsedCv>
+{
+    private readonly ICvParser _cvParser;
+
+    public PreviewCvEndpoint(ICvParser cvParser)
     {
-        _cvParserService = cvParserService;
+        _cvParser = cvParser;
     }
 
     public override void Configure()
@@ -27,16 +31,16 @@ public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
         });
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(PreviewCvRequest req, CancellationToken ct)
     {
-        if (Files.Count == 0)
+        var file = req.File;
+
+        if (file is null || file.Length == 0)
         {
             AddError("No file provided.");
             await Send.ErrorsAsync(cancellation: ct);
             return;
         }
-
-        var file = Files[0];
 
         if (file.ContentType != "application/pdf")
         {
@@ -45,8 +49,18 @@ public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
             return;
         }
 
-        using var stream = file.OpenReadStream();
-        var parsedCv = _cvParserService.Parse(stream);
+        ParsedCv parsedCv;
+        try
+        {
+            using var stream = file.OpenReadStream();
+            parsedCv = _cvParser.Parse(stream);
+        }
+        catch (InvalidCvFileException ex)
+        {
+            AddError(ex.Message);
+            await Send.ErrorsAsync(cancellation: ct);
+            return;
+        }
 
         await Send.OkAsync(parsedCv, ct);
     }
