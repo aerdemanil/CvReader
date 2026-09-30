@@ -1,10 +1,15 @@
 using CvReader.Api.Services;
 using FastEndpoints;
+using UglyToad.PdfPig.Core;
 
 namespace CvReader.Api.Endpoints.cv;
 
-public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
+public class PreviewCvRequest
+{
+    public IFormFile File { get; set; } = default!;
+}
 
+public class PreviewCvEndpoint : Endpoint<PreviewCvRequest, ParsedCv>
 {
     private readonly CvParserService _cvParserService;
 
@@ -27,16 +32,16 @@ public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
         });
     }
 
-    public override async Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(PreviewCvRequest req, CancellationToken ct)
     {
-        if (Files.Count == 0)
+        var file = req.File;
+
+        if (file is null || file.Length == 0)
         {
             AddError("No file provided.");
             await Send.ErrorsAsync(cancellation: ct);
             return;
         }
-
-        var file = Files[0];
 
         if (file.ContentType != "application/pdf")
         {
@@ -45,8 +50,18 @@ public class PreviewCvEndpoint : EndpointWithoutRequest<ParsedCv>
             return;
         }
 
-        using var stream = file.OpenReadStream();
-        var parsedCv = _cvParserService.Parse(stream);
+        ParsedCv parsedCv;
+        try
+        {
+            using var stream = file.OpenReadStream();
+            parsedCv = _cvParserService.Parse(stream);
+        }
+        catch (PdfDocumentFormatException)
+        {
+            AddError("The file could not be read as a valid PDF.");
+            await Send.ErrorsAsync(cancellation: ct);
+            return;
+        }
 
         await Send.OkAsync(parsedCv, ct);
     }
