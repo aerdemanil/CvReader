@@ -1,8 +1,7 @@
-using CvReader.Api.Services;
+using CvReader.Application.Cv;
 using FastEndpoints;
-using UglyToad.PdfPig.Core;
 
-namespace CvReader.Api.Endpoints.cv;
+namespace CvReader.Api.Endpoints.Cv;
 
 public class PreviewCvRequest
 {
@@ -11,11 +10,11 @@ public class PreviewCvRequest
 
 public class PreviewCvEndpoint : Endpoint<PreviewCvRequest, ParsedCv>
 {
-    private readonly CvParserService _cvParserService;
+    private readonly ICvParser _cvParser;
 
-    public PreviewCvEndpoint(CvParserService cvParserService)
+    public PreviewCvEndpoint(ICvParser cvParser)
     {
-        _cvParserService = cvParserService;
+        _cvParser = cvParser;
     }
 
     public override void Configure()
@@ -54,11 +53,11 @@ public class PreviewCvEndpoint : Endpoint<PreviewCvRequest, ParsedCv>
         try
         {
             using var stream = file.OpenReadStream();
-            parsedCv = _cvParserService.Parse(stream);
+            parsedCv = _cvParser.Parse(stream);
         }
-        catch (PdfDocumentFormatException)
+        catch (InvalidCvFileException ex)
         {
-            AddError("The file could not be read as a valid PDF.");
+            AddError(ex.Message);
             await Send.ErrorsAsync(cancellation: ct);
             return;
         }

@@ -1,4 +1,4 @@
-namespace CvReader.Api.Entities;
+namespace CvReader.Domain.Entities;
 
 public class Profile
 {

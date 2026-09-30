@@ -1,15 +1,11 @@
-using CvReader.Api.Data;
-using CvReader.Api.Services;
+using CvReader.Infrastructure;
 using FastEndpoints;
-using Microsoft.EntityFrameworkCore;
 using static FastEndpoints.Swagger.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints();
 builder.Services.SwaggerDocument();
-builder.Services.AddSingleton<CvParserService>();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 

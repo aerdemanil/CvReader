@@ -1,7 +1,7 @@
-using CvReader.Api.Entities;
+using CvReader.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CvReader.Api.Data;
+namespace CvReader.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {

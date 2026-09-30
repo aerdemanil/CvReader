@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/CvReader.Api/CvReader.Api.csproj" />
+    <Project Path="src/CvReader.Application/CvReader.Application.csproj" />
+    <Project Path="src/CvReader.Domain/CvReader.Domain.csproj" />
+    <Project Path="src/CvReader.Infrastructure/CvReader.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CvReader.Tests/CvReader.Tests.csproj" />

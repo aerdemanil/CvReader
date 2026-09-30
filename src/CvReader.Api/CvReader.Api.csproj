@@ -14,8 +14,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="PdfPig" Version="0.1.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CvReader.Application\CvReader.Application.csproj" />
+    <ProjectReference Include="..\CvReader.Infrastructure\CvReader.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
