@@ -16,12 +16,12 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<MatchResult>(entity =>
         {
-            // Seviyeyi veritabanında 1/2/3 yerine "K1"/"K2"/"K3" olarak sakla.
+            
             entity.Property(r => r.Tier)
                 .HasConversion<string>()
                 .HasMaxLength(2);
 
-            // Bir profil bir ilan için yalnızca bir kez skorlanabilir.
+            
             entity.HasIndex(r => new { r.JobPostingId, r.ProfileId })
                 .IsUnique();
         });
@@ -31,7 +31,7 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Email).HasMaxLength(256);
             entity.Property(u => u.Role).HasMaxLength(32);
 
-            // Aynı e-posta ile ikinci bir hesap açılamaz.
+           
             entity.HasIndex(u => u.Email).IsUnique();
         });
     }
