@@ -15,7 +15,6 @@ public class GetJobEndpoint : Endpoint<JobIdRequest, JobPostingDto>
     public override void Configure()
     {
         Get("/api/jobs/{id}");
-        AllowAnonymous();
         Summary(s => s.Summary = "Get a job posting");
     }
 

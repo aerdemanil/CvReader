@@ -20,7 +20,6 @@ public class BulkUploadCvEndpoint : Endpoint<BulkUploadCvRequest, List<CvUploadR
     public override void Configure()
     {
         Post("/api/cv/bulk");
-        AllowAnonymous();
         AllowFileUploads();
         Summary(s =>
         {

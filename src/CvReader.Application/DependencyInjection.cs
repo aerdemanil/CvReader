@@ -1,3 +1,4 @@
+using CvReader.Application.Auth;
 using CvReader.Application.Cv;
 using CvReader.Application.Jobs;
 using CvReader.Application.Matching;
@@ -12,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<CvUploadService>();
         services.AddScoped<JobPostingService>();
         services.AddScoped<MatchingService>();
+        services.AddScoped<AuthService>();
 
         return services;
     }

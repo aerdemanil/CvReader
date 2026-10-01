@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<JobPosting> JobPostings => Set<JobPosting>();
     public DbSet<MatchResult> MatchResults => Set<MatchResult>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +24,15 @@ public class AppDbContext : DbContext
             // Bir profil bir ilan için yalnızca bir kez skorlanabilir.
             entity.HasIndex(r => new { r.JobPostingId, r.ProfileId })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property(u => u.Email).HasMaxLength(256);
+            entity.Property(u => u.Role).HasMaxLength(32);
+
+            // Aynı e-posta ile ikinci bir hesap açılamaz.
+            entity.HasIndex(u => u.Email).IsUnique();
         });
     }
 }

@@ -15,7 +15,6 @@ public class GetMatchResultsEndpoint : Endpoint<JobIdRequest, List<MatchResultDt
     public override void Configure()
     {
         Get("/api/jobs/{id}/results");
-        AllowAnonymous();
         Summary(s => s.Summary = "Get saved match results for a job posting");
     }
 

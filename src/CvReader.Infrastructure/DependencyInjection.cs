@@ -3,6 +3,7 @@ using CvReader.Application.Cv;
 using CvReader.Infrastructure.Parsing;
 using CvReader.Infrastructure.Persistence;
 using CvReader.Infrastructure.Persistence.Repositories;
+using CvReader.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,10 +18,12 @@ public static class DependencyInjection
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddSingleton<ICvParser, PdfPigCvParser>();
+        services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IJobPostingRepository, JobPostingRepository>();
         services.AddScoped<IMatchResultRepository, MatchResultRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }

@@ -15,7 +15,6 @@ public class RunMatchEndpoint : Endpoint<JobIdRequest, List<MatchResultDto>>
     public override void Configure()
     {
         Post("/api/jobs/{id}/match");
-        AllowAnonymous();
         Summary(s =>
         {
             s.Summary = "Score all profiles against a job posting";

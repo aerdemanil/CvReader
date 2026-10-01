@@ -33,7 +33,6 @@ public class CreateJobEndpoint : Endpoint<CreateJobRequest, JobPostingDto>
     public override void Configure()
     {
         Post("/api/jobs");
-        AllowAnonymous();
         Summary(s => s.Summary = "Create a job posting with keywords");
     }
 

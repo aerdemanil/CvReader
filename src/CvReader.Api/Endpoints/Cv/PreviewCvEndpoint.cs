@@ -20,7 +20,6 @@ public class PreviewCvEndpoint : Endpoint<PreviewCvRequest, ParsedCv>
     public override void Configure()
     {
         Post("/api/cv/preview");
-        AllowAnonymous();
         AllowFileUploads();
         Summary(s =>
         {
