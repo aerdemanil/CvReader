@@ -14,14 +14,32 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // yeni
+        modelBuilder.Entity<JobPosting>(entity =>
+        {
+            entity.Property(j => j.Title).HasMaxLength(200);
+            entity.Property(j => j.Keywords).HasColumnType("varchar(100)[]");
+        });
+
+        // yeni
+        modelBuilder.Entity<Profile>(entity =>
+        {
+            entity.Property(p => p.FullName).HasMaxLength(200);
+            entity.Property(p => p.Email).HasMaxLength(256);
+            entity.Property(p => p.Phone).HasMaxLength(32);
+            entity.Property(p => p.FileName).HasMaxLength(260);
+            // RawText bilerek text bırakıldı (CV metni uzun olabilir)
+        });
+
         modelBuilder.Entity<MatchResult>(entity =>
         {
-            
             entity.Property(r => r.Tier)
                 .HasConversion<string>()
                 .HasMaxLength(2);
 
-            
+            entity.Property(r => r.MatchedKeywords).HasColumnType("varchar(100)[]"); 
+            entity.Property(r => r.MissingKeywords).HasColumnType("varchar(100)[]"); 
+
             entity.HasIndex(r => new { r.JobPostingId, r.ProfileId })
                 .IsUnique();
         });
@@ -30,8 +48,8 @@ public class AppDbContext : DbContext
         {
             entity.Property(u => u.Email).HasMaxLength(256);
             entity.Property(u => u.Role).HasMaxLength(32);
+            entity.Property(u => u.PasswordHash).HasMaxLength(60); 
 
-           
             entity.HasIndex(u => u.Email).IsUnique();
         });
     }
