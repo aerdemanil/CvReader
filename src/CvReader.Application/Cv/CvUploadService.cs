@@ -36,7 +36,15 @@ public class CvUploadService
             PageCount = parsed.PageCount
         };
 
-        await _profiles.AddAsync(profile, ct);
+        try
+        {
+            await _profiles.AddAsync(profile, ct);
+        }
+        catch (ProfileSaveException ex)
+        {
+            return new CvUploadResult(fileName, null, ex.Message);
+        }
+
         return new CvUploadResult(fileName, profile.Id, null);
     }
 }
