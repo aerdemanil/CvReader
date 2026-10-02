@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CvReader.Api\CvReader.Api.csproj" />
+    <ProjectReference Include="..\..\src\CvReader.Application\CvReader.Application.csproj" />
   </ItemGroup>
 
 </Project>

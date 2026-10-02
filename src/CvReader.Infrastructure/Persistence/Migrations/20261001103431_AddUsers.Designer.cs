@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using CvReader.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CvReader.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261001103431_AddUsers")]
+    partial class AddUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,12 +37,11 @@ namespace CvReader.Infrastructure.Persistence.Migrations
 
                     b.PrimitiveCollection<List<string>>("Keywords")
                         .IsRequired()
-                        .HasColumnType("varchar(100)[]");
+                        .HasColumnType("text[]");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -60,11 +62,11 @@ namespace CvReader.Infrastructure.Persistence.Migrations
 
                     b.PrimitiveCollection<List<string>>("MatchedKeywords")
                         .IsRequired()
-                        .HasColumnType("varchar(100)[]");
+                        .HasColumnType("text[]");
 
                     b.PrimitiveCollection<List<string>>("MissingKeywords")
                         .IsRequired()
-                        .HasColumnType("varchar(100)[]");
+                        .HasColumnType("text[]");
 
                     b.Property<Guid>("ProfileId")
                         .HasColumnType("uuid");
@@ -97,24 +99,20 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("text");
 
                     b.Property<string>("FileName")
                         .IsRequired()
-                        .HasMaxLength(260)
-                        .HasColumnType("character varying(260)");
+                        .HasColumnType("text");
 
                     b.Property<string>("FullName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<int>("PageCount")
                         .HasColumnType("integer");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RawText")
                         .IsRequired()
@@ -141,8 +139,7 @@ namespace CvReader.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Role")
                         .IsRequired()

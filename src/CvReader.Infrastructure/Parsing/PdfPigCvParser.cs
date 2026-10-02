@@ -20,7 +20,10 @@ public class PdfPigCvParser : ICvParser
                 text.AppendLine(string.Join(" ", words));
             }
 
-            return new ParsedCv(text.ToString(), document.NumberOfPages);
+            // PostgreSQL text kolonları \0 karakterini kabul etmez; bazı PDF'ler bunu üretir.
+            var cleanText = text.ToString().Replace("\0", string.Empty);
+
+            return new ParsedCv(cleanText, document.NumberOfPages);
         }
         catch (PdfDocumentFormatException ex)
         {
