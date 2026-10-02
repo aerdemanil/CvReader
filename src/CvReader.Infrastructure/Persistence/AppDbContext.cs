@@ -14,21 +14,21 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // yeni
+        
         modelBuilder.Entity<JobPosting>(entity =>
         {
             entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Keywords).HasColumnType("varchar(100)[]");
         });
 
-        // yeni
+        
         modelBuilder.Entity<Profile>(entity =>
         {
             entity.Property(p => p.FullName).HasMaxLength(200);
             entity.Property(p => p.Email).HasMaxLength(256);
             entity.Property(p => p.Phone).HasMaxLength(32);
             entity.Property(p => p.FileName).HasMaxLength(260);
-            // RawText bilerek text bırakıldı (CV metni uzun olabilir)
+            
         });
 
         modelBuilder.Entity<MatchResult>(entity =>
