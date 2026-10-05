@@ -21,4 +21,7 @@ public class JobPostingRepository : IJobPostingRepository
 
     public Task<JobPosting?> GetByIdAsync(Guid id, CancellationToken ct) =>
         _db.JobPostings.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id, ct);
+
+    public Task<List<JobPosting>> GetAllAsync(CancellationToken ct) =>
+        _db.JobPostings.AsNoTracking().OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
 }

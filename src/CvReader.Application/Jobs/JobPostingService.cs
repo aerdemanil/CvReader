@@ -1,5 +1,5 @@
+using System.Text.RegularExpressions;
 using CvReader.Application.Abstractions;
-using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Jobs;
@@ -24,7 +24,7 @@ public class JobPostingService
             Keywords = keywords
                 .Select(k => k.Trim())
                 .Where(k => k.Length > 0)
-                .DistinctBy(KeywordMatcher.Normalize)
+                .DistinctBy(Normalize)
                 .ToList()
         };
 
@@ -38,6 +38,24 @@ public class JobPostingService
         return job is null ? null : ToDto(job);
     }
 
+    public async Task<List<JobPostingDto>> GetAllAsync(CancellationToken ct)
+    {
+        var jobs = await _jobs.GetAllAsync(ct);
+        return jobs.Select(ToDto).ToList();
+    }
+
     private static JobPostingDto ToDto(JobPosting job) =>
         new(job.Id, job.Title, job.Keywords, job.CreatedAt);
+
+    // "Java", "java " ve "JAVA" aynı anahtar kelime sayılsın; Türkçe İ/ı da katlanır.
+    private static string Normalize(string value)
+    {
+        var folded = value
+            .Replace('İ', 'i')
+            .Replace('I', 'i')
+            .Replace('ı', 'i')
+            .ToLowerInvariant();
+
+        return Regex.Replace(folded, @"\s+", " ").Trim();
+    }
 }

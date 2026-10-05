@@ -1,4 +1,5 @@
 using CvReader.Application.Abstractions;
+using CvReader.Application.Embeddings;
 using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Cv;
@@ -9,11 +10,13 @@ public class CvUploadService
 {
     private readonly ICvParser _cvParser;
     private readonly IProfileRepository _profiles;
+    private readonly IEmbeddingService _embeddings;
 
-    public CvUploadService(ICvParser cvParser, IProfileRepository profiles)
+    public CvUploadService(ICvParser cvParser, IProfileRepository profiles, IEmbeddingService embeddings)
     {
         _cvParser = cvParser;
         _profiles = profiles;
+        _embeddings = embeddings;
     }
 
     public async Task<CvUploadResult> UploadAsync(string fileName, Stream content, CancellationToken ct)
@@ -28,6 +31,17 @@ public class CvUploadService
             return new CvUploadResult(fileName, null, ex.Message);
         }
 
+        // Kayıttan önce alınır; servis yanıt vermezse vektörsüz profil oluşmaz.
+        float[] embedding;
+        try
+        {
+            embedding = await _embeddings.EmbedAsync(parsed.Text, ct);
+        }
+        catch (EmbeddingException ex)
+        {
+            return new CvUploadResult(fileName, null, ex.Message);
+        }
+
         var profile = new Profile
         {
             Id = Guid.NewGuid(),
@@ -38,7 +52,7 @@ public class CvUploadService
 
         try
         {
-            await _profiles.AddAsync(profile, ct);
+            await _profiles.AddAsync(profile, embedding, ct);
         }
         catch (ProfileSaveException ex)
         {

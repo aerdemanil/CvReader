@@ -1,3 +1,4 @@
+using CvReader.Application.Embeddings;
 using CvReader.Application.Matching;
 using FastEndpoints;
 
@@ -24,7 +25,17 @@ public class RunMatchEndpoint : Endpoint<JobIdRequest, List<MatchResultDto>>
 
     public override async Task HandleAsync(JobIdRequest req, CancellationToken ct)
     {
-        var results = await _matchingService.RunAsync(req.Id, ct);
+        List<MatchResultDto>? results;
+        try
+        {
+            results = await _matchingService.RunAsync(req.Id, ct);
+        }
+        catch (EmbeddingException ex)
+        {
+            AddError(ex.Message);
+            await Send.ErrorsAsync(503, ct);
+            return;
+        }
 
         if (results is null)
         {
