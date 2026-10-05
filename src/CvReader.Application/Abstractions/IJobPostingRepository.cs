@@ -6,4 +6,5 @@ public interface IJobPostingRepository
 {
     Task AddAsync(JobPosting job, CancellationToken ct);
     Task<JobPosting?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<List<JobPosting>> GetAllAsync(CancellationToken ct);
 }

@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<JobPosting> JobPostings => Set<JobPosting>();
     public DbSet<MatchResult> MatchResults => Set<MatchResult>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<ProfileEmbedding> ProfileEmbeddings => Set<ProfileEmbedding>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,15 +32,21 @@ public class AppDbContext : DbContext
             
         });
 
+        modelBuilder.HasPostgresExtension("vector");
+
+        modelBuilder.Entity<ProfileEmbedding>(entity =>
+        {
+            entity.HasKey(e => e.ProfileId);
+            entity.Property(e => e.Embedding).HasColumnType("vector(1024)"); // bge-m3 boyutu
+
+            entity.HasOne<Profile>()
+                .WithOne()
+                .HasForeignKey<ProfileEmbedding>(e => e.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<MatchResult>(entity =>
         {
-            entity.Property(r => r.Tier)
-                .HasConversion<string>()
-                .HasMaxLength(2);
-
-            entity.Property(r => r.MatchedKeywords).HasColumnType("varchar(100)[]"); 
-            entity.Property(r => r.MissingKeywords).HasColumnType("varchar(100)[]"); 
-
             entity.HasIndex(r => new { r.JobPostingId, r.ProfileId })
                 .IsUnique();
         });
