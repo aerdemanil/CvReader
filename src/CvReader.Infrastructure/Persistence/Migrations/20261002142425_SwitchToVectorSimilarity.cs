@@ -60,13 +60,15 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                 name: "MatchedKeywords",
                 table: "MatchResults",
                 type: "varchar(100)[]",
-                nullable: false);
+                nullable: false,
+                defaultValue: new List<string>());
 
             migrationBuilder.AddColumn<List<string>>(
                 name: "MissingKeywords",
                 table: "MatchResults",
                 type: "varchar(100)[]",
-                nullable: false);
+                nullable: false,
+                defaultValue: new List<string>());
 
             migrationBuilder.AddColumn<string>(
                 name: "Tier",

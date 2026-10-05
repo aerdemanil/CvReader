@@ -16,16 +16,14 @@ public class ProfileRepository : IProfileRepository
         _db = db;
     }
 
-    public async Task AddAsync(Profile profile, float[] embedding, CancellationToken ct)
+    public async Task AddAsync(Profile profile, IReadOnlyList<TermEmbedding> terms, CancellationToken ct)
     {
-        var profileEmbedding = new ProfileEmbedding
-        {
-            ProfileId = profile.Id,
-            Embedding = new Vector(embedding)
-        };
+        var profileTerms = terms
+            .Select(t => new ProfileTerm { ProfileId = profile.Id, Term = t.Term, Embedding = new Vector(t.Embedding) })
+            .ToList();
 
         _db.Profiles.Add(profile);
-        _db.ProfileEmbeddings.Add(profileEmbedding);
+        _db.ProfileTerms.AddRange(profileTerms);
         try
         {
             await _db.SaveChangesAsync(ct);
@@ -34,18 +32,97 @@ public class ProfileRepository : IProfileRepository
         {
             // Kaydedilemeyen kayıtlar context'te kalırsa sonraki SaveChanges çağrıları da patlar.
             _db.Entry(profile).State = EntityState.Detached;
-            _db.Entry(profileEmbedding).State = EntityState.Detached;
+            foreach (var term in profileTerms)
+                _db.Entry(term).State = EntityState.Detached;
             throw new ProfileSaveException("The CV could not be saved.", ex);
         }
     }
 
-    public Task<Dictionary<Guid, double>> GetSimilaritiesAsync(float[] query, CancellationToken ct)
-    {
-        var queryVector = new Vector(query);
+    public Task<bool> ExistsAsync(Guid ownerId, string contentHash, CancellationToken ct) =>
+        _db.Profiles.AnyAsync(p => p.OwnerId == ownerId && p.ContentHash == contentHash, ct);
 
+    public async Task<List<ProfileTermSimilarity>> GetBestSimilaritiesAsync(Guid ownerId, Guid jobPostingId, CancellationToken ct)
+    {
         // CosineDistance, pgvector'ün <=> operatörüne çevrilir; benzerlik = 1 - uzaklık.
-        return _db.ProfileEmbeddings
-            .Select(e => new { e.ProfileId, Distance = e.Embedding.CosineDistance(queryVector) })
-            .ToDictionaryAsync(x => x.ProfileId, x => 1 - x.Distance, ct);
+        // Sadece listede gösterilen alanlar seçilir; CV metni (RawText) çekilmez.
+        var rows = await (
+            from profile in _db.Profiles
+            where profile.OwnerId == ownerId
+            from job in _db.JobPostings
+            where job.Id == jobPostingId && job.OwnerId == ownerId
+            join jobTerm in _db.JobPostingTerms on job.Id equals jobTerm.JobPostingId
+            select new
+            {
+                profile.Id,
+                profile.FileName,
+                jobTerm.Term,
+                Distance = _db.ProfileTerms
+                    .Where(t => t.ProfileId == profile.Id)
+                    .Min(t => (double?)t.Embedding.CosineDistance(jobTerm.Embedding))
+            }).ToListAsync(ct);
+
+        return rows.Select(x => new ProfileTermSimilarity(x.Id, x.FileName, x.Term, 1 - (x.Distance ?? 1))).ToList();
     }
+
+    public async Task<List<TermMatch>> GetCloseTermsAsync(Guid ownerId, Guid jobPostingId, Guid profileId, double minSimilarity, CancellationToken ct)
+    {
+        var maxDistance = 1 - minSimilarity;
+
+        var rows = await (
+            from profile in _db.Profiles
+            where profile.Id == profileId && profile.OwnerId == ownerId
+            from job in _db.JobPostings
+            where job.Id == jobPostingId && job.OwnerId == ownerId
+            join jobTerm in _db.JobPostingTerms on job.Id equals jobTerm.JobPostingId
+            join profileTerm in _db.ProfileTerms on profile.Id equals profileTerm.ProfileId
+            let distance = profileTerm.Embedding.CosineDistance(jobTerm.Embedding)
+            where distance <= maxDistance
+            select new { JobTerm = jobTerm.Term, CvTerm = profileTerm.Term, Distance = distance }).ToListAsync(ct);
+
+        return rows.Select(x => new TermMatch(x.JobTerm, x.CvTerm, 1 - x.Distance)).ToList();
+    }
+
+    public async Task<ProfileSummaries> GetPageAsync(Guid ownerId, ProfileFilter filter, int skip, int take, CancellationToken ct)
+    {
+        var query = _db.Profiles.AsNoTracking().Where(p => p.OwnerId == ownerId);
+
+        if (filter.Unfiled)
+            query = query.Where(p => p.FolderId == null);
+        else if (filter.FolderId is not null)
+            query = query.Where(p => p.FolderId == filter.FolderId);
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            // Kullanıcının yazdığı % ve _ karakterleri joker değil, düz metin olarak aranır.
+            var escaped = filter.Search.Trim().Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
+            // Npgsql kaçış karakteri açıkça verilmezse ILIKE'ı kaçışsız (ESCAPE '') üretir.
+            query = query.Where(p => EF.Functions.ILike(p.FileName, $"%{escaped}%", @"\"));
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenBy(p => p.Id)
+            .Skip(skip)
+            .Take(take)
+            .Select(p => new ProfileSummary(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId))
+            .ToListAsync(ct);
+
+        return new ProfileSummaries(total, items);
+    }
+
+    public Task<Profile?> GetByIdAsync(Guid ownerId, Guid id, CancellationToken ct) =>
+        _db.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == ownerId, ct);
+
+    public Task MoveAsync(Guid ownerId, IReadOnlyCollection<Guid> ids, Guid? folderId, CancellationToken ct) =>
+        _db.Profiles
+            .Where(p => p.OwnerId == ownerId && ids.Contains(p.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.FolderId, folderId), ct);
+
+    // Terim satırları veritabanındaki cascade ile birlikte silinir.
+    public async Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
+        await _db.Profiles
+            .Where(p => p.Id == id && p.OwnerId == ownerId)
+            .ExecuteDeleteAsync(ct) > 0;
 }

@@ -3,7 +3,7 @@ using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Auth;
 
-public record AuthResult(Guid UserId, string Email, string Role, string Token, DateTime ExpiresAt);
+public record AuthResult(string Email, string Token, DateTime ExpiresAt);
 
 public class AuthService
 {
@@ -27,10 +27,9 @@ public class AuthService
 
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             Email = normalizedEmail,
-            PasswordHash = _hasher.Hash(password),
-            Role = UserRoles.Employer
+            PasswordHash = _hasher.Hash(password)
         };
 
         await _users.AddAsync(user, ct);
@@ -41,16 +40,27 @@ public class AuthService
     {
         var user = await _users.GetByEmailAsync(NormalizeEmail(email), ct);
 
-        if (user is null || !_hasher.Verify(password, user.PasswordHash))
+        if (user is null)
+        {
+            // Kullanıcı yokken de aynı hash maliyeti ödenir; yanıt süresi e-postanın kayıtlı olup olmadığını ele vermez.
+            _hasher.Hash(password);
             return null;
+        }
 
-        return ToResult(user);
+        return _hasher.Verify(password, user.PasswordHash) ? ToResult(user) : null;
     }
+
+    public Task LogoutAsync(Guid userId, CancellationToken ct) =>
+        _users.IncrementTokenVersionAsync(userId, ct);
+
+    // Çıkış yapılmış ya da kullanıcısı silinmiş bir token'ı reddeder.
+    public async Task<bool> IsSessionValidAsync(Guid userId, int tokenVersion, CancellationToken ct) =>
+        await _users.GetTokenVersionAsync(userId, ct) == tokenVersion;
 
     private AuthResult ToResult(User user)
     {
         var token = _tokens.CreateToken(user);
-        return new AuthResult(user.Id, user.Email, user.Role, token.Token, token.ExpiresAt);
+        return new AuthResult(user.Email, token.Token, token.ExpiresAt);
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

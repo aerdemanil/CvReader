@@ -1,3 +1,4 @@
+using CvReader.Api.Auth;
 using CvReader.Application.Jobs;
 using FastEndpoints;
 
@@ -20,7 +21,7 @@ public class GetJobEndpoint : Endpoint<JobIdRequest, JobPostingDto>
 
     public override async Task HandleAsync(JobIdRequest req, CancellationToken ct)
     {
-        var job = await _jobService.GetAsync(req.Id, ct);
+        var job = await _jobService.GetAsync(User.GetUserId(), req.Id, ct);
 
         if (job is null)
         {

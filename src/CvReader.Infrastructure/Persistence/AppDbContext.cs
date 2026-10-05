@@ -1,61 +1,102 @@
+using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
+using CvReader.Infrastructure.Embeddings;
 using Microsoft.EntityFrameworkCore;
 
 namespace CvReader.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
+    private static readonly string VectorColumnType = $"vector({EmbeddingVector.Dimensions})";
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<JobPosting> JobPostings => Set<JobPosting>();
-    public DbSet<MatchResult> MatchResults => Set<MatchResult>();
+    public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<ProfileEmbedding> ProfileEmbeddings => Set<ProfileEmbedding>();
+    public DbSet<ProfileTerm> ProfileTerms => Set<ProfileTerm>();
+    public DbSet<JobPostingTerm> JobPostingTerms => Set<JobPostingTerm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        
+        modelBuilder.HasPostgresExtension("vector");
+
         modelBuilder.Entity<JobPosting>(entity =>
         {
             entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Keywords).HasColumnType("varchar(100)[]");
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(j => j.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // İlan listesi sahibine göre filtrelenir ve yeniden eskiye sıralanır.
+            entity.HasIndex(j => new { j.OwnerId, j.CreatedAt });
         });
 
-        
-        modelBuilder.Entity<Profile>(entity =>
+        modelBuilder.Entity<JobPostingTerm>(entity =>
         {
-            entity.Property(p => p.FullName).HasMaxLength(200);
-            entity.Property(p => p.Email).HasMaxLength(256);
-            entity.Property(p => p.Phone).HasMaxLength(32);
-            entity.Property(p => p.FileName).HasMaxLength(260);
-            
-        });
+            entity.HasKey(t => new { t.JobPostingId, t.Term });
+            entity.Property(t => t.Term).HasMaxLength(TermExtractor.MaxTermLength);
+            entity.Property(t => t.Embedding).HasColumnType(VectorColumnType);
 
-        modelBuilder.HasPostgresExtension("vector");
-
-        modelBuilder.Entity<ProfileEmbedding>(entity =>
-        {
-            entity.HasKey(e => e.ProfileId);
-            entity.Property(e => e.Embedding).HasColumnType("vector(1024)"); // bge-m3 boyutu
-
-            entity.HasOne<Profile>()
-                .WithOne()
-                .HasForeignKey<ProfileEmbedding>(e => e.ProfileId)
+            entity.HasOne<JobPosting>()
+                .WithMany()
+                .HasForeignKey(t => t.JobPostingId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<MatchResult>(entity =>
+        modelBuilder.Entity<Profile>(entity =>
         {
-            entity.HasIndex(r => new { r.JobPostingId, r.ProfileId })
-                .IsUnique();
+            entity.Property(p => p.FileName).HasMaxLength(260);
+            entity.Property(p => p.ContentHash).HasMaxLength(64); // SHA-256 hex
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(p => p.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Klasör silinince CV'leri silinmez, klasörsüz kalır.
+            entity.HasOne<Folder>()
+                .WithMany()
+                .HasForeignKey(p => p.FolderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Aynı kullanıcı aynı dosyayı iki kez kaydedemez; sahibine göre filtrelemeyi de karşılar.
+            entity.HasIndex(p => new { p.OwnerId, p.ContentHash }).IsUnique();
+        });
+
+        modelBuilder.Entity<Folder>(entity =>
+        {
+            entity.Property(f => f.Name).HasMaxLength(100);
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(f => f.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(f => new { f.OwnerId, f.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProfileTerm>(entity =>
+        {
+            // Bir CV'nin terimleri bu anahtar üzerinden okunur.
+            entity.HasKey(t => new { t.ProfileId, t.Term });
+            entity.Property(t => t.Term).HasMaxLength(TermExtractor.MaxTermLength);
+            entity.Property(t => t.Embedding).HasColumnType(VectorColumnType);
+
+            entity.HasOne<Profile>()
+                .WithMany()
+                .HasForeignKey(t => t.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(u => u.Email).HasMaxLength(256);
-            entity.Property(u => u.Role).HasMaxLength(32);
-            entity.Property(u => u.PasswordHash).HasMaxLength(60); 
+            entity.Property(u => u.PasswordHash).HasMaxLength(60);
 
             entity.HasIndex(u => u.Email).IsUnique();
         });
