@@ -9,17 +9,20 @@ public record JobPostingDto(Guid Id, string Title, List<string> Keywords, DateTi
 public class JobPostingService
 {
     private readonly IJobPostingRepository _jobs;
+    private readonly IEmbeddingService _embeddings;
 
-    public JobPostingService(IJobPostingRepository jobs)
+    public JobPostingService(IJobPostingRepository jobs, IEmbeddingService embeddings)
     {
         _jobs = jobs;
+        _embeddings = embeddings;
     }
 
-    public async Task<JobPostingDto> CreateAsync(string title, IEnumerable<string> keywords, CancellationToken ct)
+    public async Task<JobPostingDto> CreateAsync(Guid ownerId, string title, IEnumerable<string> keywords, CancellationToken ct)
     {
         var job = new JobPosting
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
+            OwnerId = ownerId,
             Title = title.Trim(),
             Keywords = keywords
                 .Select(k => k.Trim())
@@ -28,21 +31,28 @@ public class JobPostingService
                 .ToList()
         };
 
-        await _jobs.AddAsync(job, ct);
+        // Anahtar kelimeler değişmediği için vektör bir kez alınır ve ilanla birlikte saklanır.
+        var embedding = await _embeddings.EmbedAsync(string.Join(", ", job.Keywords), ct);
+
+        await _jobs.AddAsync(job, embedding, ct);
         return ToDto(job);
     }
 
-    public async Task<JobPostingDto?> GetAsync(Guid id, CancellationToken ct)
+    public async Task<JobPostingDto?> GetAsync(Guid ownerId, Guid id, CancellationToken ct)
     {
-        var job = await _jobs.GetByIdAsync(id, ct);
+        var job = await _jobs.GetByIdAsync(ownerId, id, ct);
         return job is null ? null : ToDto(job);
     }
 
-    public async Task<List<JobPostingDto>> GetAllAsync(CancellationToken ct)
+    public async Task<List<JobPostingDto>> GetAllAsync(Guid ownerId, CancellationToken ct)
     {
-        var jobs = await _jobs.GetAllAsync(ct);
+        var jobs = await _jobs.GetAllAsync(ownerId, ct);
         return jobs.Select(ToDto).ToList();
     }
+
+    // İlan bulunamazsa false döner.
+    public Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
+        _jobs.DeleteAsync(ownerId, id, ct);
 
     private static JobPostingDto ToDto(JobPosting job) =>
         new(job.Id, job.Title, job.Keywords, job.CreatedAt);

@@ -1,4 +1,4 @@
-4services:
+services:
   db:
     image: pgvector/pgvector:pg18
     container_name: cvreader-db
@@ -6,7 +6,7 @@
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: cvreader
-    ports: ["5433:5432"]
+    ports: ["127.0.0.1:5433:5432"]
     volumes: [pgdata:/var/lib/postgresql]
 volumes:
   pgdata: {}

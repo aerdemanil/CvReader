@@ -1,3 +1,4 @@
+using CvReader.Api.Auth;
 using CvReader.Application.Jobs;
 using FastEndpoints;
 
@@ -15,11 +16,11 @@ public class ListJobsEndpoint : EndpointWithoutRequest<List<JobPostingDto>>
     public override void Configure()
     {
         Get("/api/jobs");
-        Summary(s => s.Summary = "List job postings, newest first");
+        Summary(s => s.Summary = "List the signed-in user's job postings, newest first");
     }
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        await Send.OkAsync(await _jobService.GetAllAsync(ct), ct);
+        await Send.OkAsync(await _jobService.GetAllAsync(User.GetUserId(), ct), ct);
     }
 }

@@ -25,6 +25,31 @@ namespace CvReader.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CvReader.Domain.Entities.Folder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Folders");
+                });
+
             modelBuilder.Entity("CvReader.Domain.Entities.JobPosting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -38,6 +63,9 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(100)[]");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -45,35 +73,9 @@ namespace CvReader.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OwnerId", "CreatedAt");
+
                     b.ToTable("JobPostings");
-                });
-
-            modelBuilder.Entity("CvReader.Domain.Entities.MatchResult", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("JobPostingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<double>("Score")
-                        .HasColumnType("double precision");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProfileId");
-
-                    b.HasIndex("JobPostingId", "ProfileId")
-                        .IsUnique();
-
-                    b.ToTable("MatchResults");
                 });
 
             modelBuilder.Entity("CvReader.Domain.Entities.Profile", b =>
@@ -82,34 +84,38 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(260)
                         .HasColumnType("character varying(260)");
 
-                    b.Property<string>("FullName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PageCount")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("RawText")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("OwnerId", "ContentHash")
+                        .IsUnique();
 
                     b.ToTable("Profiles");
                 });
@@ -133,10 +139,8 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                    b.Property<int>("TokenVersion")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -144,6 +148,20 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("CvReader.Infrastructure.Persistence.JobPostingEmbedding", b =>
+                {
+                    b.Property<Guid>("JobPostingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Vector>("Embedding")
+                        .IsRequired()
+                        .HasColumnType("vector(1024)");
+
+                    b.HasKey("JobPostingId");
+
+                    b.ToTable("JobPostingEmbeddings");
                 });
 
             modelBuilder.Entity("CvReader.Infrastructure.Persistence.ProfileEmbedding", b =>
@@ -160,23 +178,45 @@ namespace CvReader.Infrastructure.Persistence.Migrations
                     b.ToTable("ProfileEmbeddings");
                 });
 
-            modelBuilder.Entity("CvReader.Domain.Entities.MatchResult", b =>
+            modelBuilder.Entity("CvReader.Domain.Entities.Folder", b =>
                 {
-                    b.HasOne("CvReader.Domain.Entities.JobPosting", "JobPosting")
+                    b.HasOne("CvReader.Domain.Entities.User", null)
                         .WithMany()
-                        .HasForeignKey("JobPostingId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.HasOne("CvReader.Domain.Entities.Profile", "Profile")
+            modelBuilder.Entity("CvReader.Domain.Entities.JobPosting", b =>
+                {
+                    b.HasOne("CvReader.Domain.Entities.User", null)
                         .WithMany()
-                        .HasForeignKey("ProfileId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.Navigation("JobPosting");
+            modelBuilder.Entity("CvReader.Domain.Entities.Profile", b =>
+                {
+                    b.HasOne("CvReader.Domain.Entities.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Profile");
+                    b.HasOne("CvReader.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CvReader.Infrastructure.Persistence.JobPostingEmbedding", b =>
+                {
+                    b.HasOne("CvReader.Domain.Entities.JobPosting", null)
+                        .WithOne()
+                        .HasForeignKey("CvReader.Infrastructure.Persistence.JobPostingEmbedding", "JobPostingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CvReader.Infrastructure.Persistence.ProfileEmbedding", b =>

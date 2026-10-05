@@ -1,3 +1,4 @@
+using CvReader.Api.Auth;
 using CvReader.Application.Auth;
 using FastEndpoints;
 using FluentValidation;
@@ -14,12 +15,12 @@ public class LoginValidator : Validator<LoginRequest>
 {
     public LoginValidator()
     {
-        RuleFor(x => x.Email).NotEmpty();
-        RuleFor(x => x.Password).NotEmpty();
+        RuleFor(x => x.Email).NotEmpty().MaximumLength(256);
+        RuleFor(x => x.Password).NotEmpty().MaximumLength(72);
     }
 }
 
-public class LoginEndpoint : Endpoint<LoginRequest, AuthResult>
+public class LoginEndpoint : Endpoint<LoginRequest, SessionResponse>
 {
     private readonly AuthService _authService;
 
@@ -32,7 +33,8 @@ public class LoginEndpoint : Endpoint<LoginRequest, AuthResult>
     {
         Post("/api/auth/login");
         AllowAnonymous();
-        Summary(s => s.Summary = "Log in with email and password and get a JWT");
+        Options(x => x.RequireRateLimiting(RateLimits.Auth));
+        Summary(s => s.Summary = "Log in with email and password; the session is set as an HttpOnly cookie");
     }
 
     public override async Task HandleAsync(LoginRequest req, CancellationToken ct)
@@ -45,6 +47,7 @@ public class LoginEndpoint : Endpoint<LoginRequest, AuthResult>
             return;
         }
 
-        await Send.OkAsync(result, ct);
+        AuthCookie.Append(HttpContext.Response, result.Token, result.ExpiresAt);
+        await Send.OkAsync(new SessionResponse(result.Email), ct);
     }
 }

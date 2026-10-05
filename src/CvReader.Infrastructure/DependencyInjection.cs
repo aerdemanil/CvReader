@@ -16,20 +16,36 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is missing. Set it with 'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"...\"'.");
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), o => o.UseVector()));
+            options.UseNpgsql(connectionString, o => o.UseVector()));
 
         services.AddSingleton<ICvParser, PdfPigCvParser>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IJobPostingRepository, JobPostingRepository>();
-        services.AddScoped<IMatchResultRepository, MatchResultRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IFolderRepository, FolderRepository>();
 
-        services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
+        // Eksik ya da hatalı ayar ilk istekte değil, uygulama açılırken fark edilir.
+        services.AddOptions<OllamaOptions>()
+            .Bind(configuration.GetSection(OllamaOptions.SectionName))
+            .Validate(
+                o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _) && !string.IsNullOrWhiteSpace(o.Model) && o.TimeoutSeconds > 0,
+                "Ollama:BaseUrl must be an absolute URL, Ollama:Model must be set and Ollama:TimeoutSeconds must be positive.")
+            .ValidateOnStart();
+
         services.AddHttpClient<IEmbeddingService, OllamaEmbeddingService>((sp, client) =>
-            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<OllamaOptions>>().Value.BaseUrl));
+        {
+            var options = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
 
         return services;
     }
