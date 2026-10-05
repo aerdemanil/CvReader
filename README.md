@@ -40,6 +40,9 @@ dotnet user-secrets set "Jwt:SigningKey" "<en az 32 karakterlik rastgele bir de�
 # 4. Şema
 dotnet tool install --global dotnet-ef   # bir kez
 dotnet ef database update --project ../CvReader.Infrastructure --startup-project .
+
+# 5. Depo köküne dön (aşağıdaki komutlar kökten çalıştırılır)
+cd ../..
 ```
 
 ## Çalıştırma
@@ -54,7 +57,10 @@ npm install
 npm run dev
 ```
 
-Tek adresten sunmak için `npm run build` çalıştırın; API çıktıyı kök adreste sunar.
+Geliştirirken uygulamayı http://localhost:5173 adresinden açın. Ön yüzün build çıktısı depoda tutulmaz;
+bu yüzden build alınmadan API'nin kök adresi (http://localhost:5130) 404 döner.
+
+Tek adresten sunmak için `src/CvReader.Web` içinde `npm run build` çalıştırın; API çıktıyı kök adreste sunar.
 
 ## Testler
 
