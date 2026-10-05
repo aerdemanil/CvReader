@@ -8,9 +8,6 @@ namespace CvReader.Infrastructure.Embeddings;
 
 public class OllamaEmbeddingService : IEmbeddingService
 {
-    // Ollama varsayılan olarak daha küçük bir bağlam kullanır; uzun CV'nin sonu kesilmesin.
-    private const int ContextLength = 8192;
-
     private record EmbedResponse(float[][]? Embeddings);
 
     private readonly HttpClient _http;
@@ -22,13 +19,13 @@ public class OllamaEmbeddingService : IEmbeddingService
         _options = options.Value;
     }
 
-    public async Task<float[]> EmbedAsync(string text, CancellationToken ct)
+    public async Task<List<TermEmbedding>> EmbedAsync(IReadOnlyList<string> terms, CancellationToken ct)
     {
+        // input bir dizi olunca Ollama her öğe için ayrı bir vektör döner.
         var request = new
         {
             model = _options.Model,
-            input = text,
-            options = new { num_ctx = ContextLength }
+            input = terms
         };
 
         EmbedResponse? body;
@@ -46,10 +43,11 @@ public class OllamaEmbeddingService : IEmbeddingService
             throw new EmbeddingException("The embedding service is not reachable.", ex);
         }
 
-        // Boş metin için Ollama boş liste döner.
-        if (body?.Embeddings is not [{ Length: EmbeddingVector.Dimensions } embedding, ..])
+        if (body?.Embeddings is not { } embeddings
+            || embeddings.Length != terms.Count
+            || embeddings.Any(e => e.Length != EmbeddingVector.Dimensions))
             throw new EmbeddingException("The embedding service returned an unexpected response.");
 
-        return embedding;
+        return terms.Select((term, i) => new TermEmbedding(term, embeddings[i])).ToList();
     }
 }

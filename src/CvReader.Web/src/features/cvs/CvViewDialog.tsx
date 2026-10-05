@@ -8,19 +8,14 @@ import { Spinner } from '../../components/Spinner'
 import { formatDate } from '../../utils/format'
 
 interface CvViewDialogProps {
-  cv: CvSummary | null
+  cv: Pick<CvSummary, 'id' | 'fileName'> | null
   onClose: () => void
 }
 
 // PDF'in kendisi saklanmaz; yüklenirken çıkarılan metin gösterilir.
 export function CvViewDialog({ cv, onClose }: CvViewDialogProps) {
   return (
-    <Dialog
-      open={cv !== null}
-      onClose={onClose}
-      title={cv?.fileName ?? ''}
-      description={cv ? `${cv.pageCount} sayfa · ${formatDate(cv.createdAt)} tarihinde yüklendi` : undefined}
-    >
+    <Dialog open={cv !== null} onClose={onClose} title={cv?.fileName ?? ''}>
       {cv && <CvText key={cv.id} id={cv.id} />}
     </Dialog>
   )
@@ -45,7 +40,14 @@ function CvText({ id }: { id: string }) {
     <div className="dialog-body">
       {error && <Alert tone="error">{error}</Alert>}
       {!detail && !error && <Spinner />}
-      {detail && <pre className="cv-text">{detail.text}</pre>}
+      {detail && (
+        <>
+          <p className="muted">
+            {detail.pageCount} sayfa · {formatDate(detail.createdAt)} tarihinde yüklendi
+          </p>
+          <pre className="cv-text">{detail.text}</pre>
+        </>
+      )}
     </div>
   )
 }

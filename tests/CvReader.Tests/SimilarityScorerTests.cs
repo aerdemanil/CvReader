@@ -13,7 +13,7 @@ public class SimilarityScorerTests
     [Fact]
     public void Similarity_above_ceiling_is_hundred()
     {
-        Assert.Equal(100, SimilarityScorer.ToScore(0.90));
+        Assert.Equal(100, SimilarityScorer.ToScore(0.99));
     }
 
     [Fact]

@@ -9,7 +9,7 @@ public class CvUploadServiceTests
     private static readonly Guid Stranger = Guid.NewGuid();
 
     private readonly FakeCvParser _parser = new();
-    private readonly FakeProfileRepository _profiles = new();
+    private readonly FakeProfileRepository _profiles = new(new FakeJobPostingRepository());
     private readonly FakeEmbeddingService _embeddings = new();
     private readonly CvUploadService _service;
 
@@ -31,6 +31,27 @@ public class CvUploadServiceTests
         Assert.Equal(Owner, saved.OwnerId);
         Assert.Equal("ada.pdf", saved.FileName);
         Assert.Equal(64, saved.ContentHash.Length);
+    }
+
+    [Fact]
+    public async Task Every_distinct_term_of_the_cv_is_embedded_and_saved_with_it()
+    {
+        await _service.UploadAsync(Owner, null, "ada.pdf", File("cv-1"), CancellationToken.None);
+
+        Assert.Equal(["parsed", "text"], Assert.Single(_embeddings.Inputs));
+        Assert.Equal(["parsed", "text"], Assert.Single(_profiles.Profiles).Terms.Select(t => t.Term));
+    }
+
+    [Fact]
+    public async Task Cv_without_words_returns_an_error_and_saves_nothing()
+    {
+        _parser.Text = "0532 111 22 33 —";
+
+        var result = await _service.UploadAsync(Owner, null, "numbers.pdf", File("cv-1"), CancellationToken.None);
+
+        Assert.NotNull(result.Error);
+        Assert.Empty(_profiles.Profiles);
+        Assert.Empty(_embeddings.Inputs);
     }
 
     [Fact]

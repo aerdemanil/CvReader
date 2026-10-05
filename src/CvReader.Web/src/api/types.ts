@@ -28,6 +28,22 @@ export interface MatchResult {
   score: number
 }
 
+// CV'de bulunan bir kelime ve ilanın anahtar kelimesine yakınlık puanı (0-100).
+export interface TermMatch {
+  term: string
+  score: number
+}
+
+export interface KeywordMatch {
+  keyword: string
+  score: number
+  terms: TermMatch[]
+}
+
+export interface MatchDetail extends MatchResult {
+  keywords: KeywordMatch[]
+}
+
 // total: kullanıcının tüm CV'lerinin sayısı; items: istenen sayfa.
 export interface MatchPage {
   total: number

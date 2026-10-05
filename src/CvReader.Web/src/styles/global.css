@@ -730,7 +730,7 @@ input {
 .chart-row,
 .chart-axis {
   display: grid;
-  grid-template-columns: 28px minmax(120px, 240px) 1fr 48px 36px;
+  grid-template-columns: 28px minmax(120px, 240px) 1fr 48px 36px 36px;
   align-items: center;
   gap: 12px;
 }
@@ -960,8 +960,8 @@ input {
 
   .chart-row,
   .chart-axis {
-    grid-template-columns: 24px minmax(80px, 120px) 1fr 40px 36px;
-    gap: 8px;
+    grid-template-columns: 24px minmax(80px, 120px) 1fr 40px 36px 36px;
+    gap: 4px;
   }
 }
 
@@ -1121,4 +1121,68 @@ input {
   .cv-row .file-note {
     display: none;
   }
+}
+
+/* ---------- Seçenek menüsü ---------- */
+
+.menu {
+  position: relative;
+}
+
+.menu-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 200px;
+  margin: 4px 0 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.menu-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu-list button:hover {
+  background: var(--surface-muted);
+}
+
+/* ---------- Eşleşen kelimeler ---------- */
+
+.match-keywords {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-keyword {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.match-note {
+  font-size: 0.85rem;
 }

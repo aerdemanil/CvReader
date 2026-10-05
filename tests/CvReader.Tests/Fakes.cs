@@ -59,36 +59,37 @@ public class FakeTokenService : ITokenService
 
 public class FakeEmbeddingService : IEmbeddingService
 {
-    public List<string> Inputs { get; } = [];
+    public List<IReadOnlyList<string>> Inputs { get; } = [];
     public float[] Result { get; set; } = [1, 0];
     public bool Fail { get; set; }
 
-    public Task<float[]> EmbedAsync(string text, CancellationToken ct)
+    public Task<List<TermEmbedding>> EmbedAsync(IReadOnlyList<string> terms, CancellationToken ct)
     {
-        Inputs.Add(text);
+        Inputs.Add(terms);
         if (Fail) throw new EmbeddingException("The embedding service is not reachable.");
-        return Task.FromResult(Result);
+        return Task.FromResult(terms.Select(t => new TermEmbedding(t, Result)).ToList());
     }
 }
 
 public class FakeCvParser : ICvParser
 {
     public bool Fail { get; set; }
+    public string Text { get; set; } = "parsed text";
 
     public ParsedCv Parse(Stream stream)
     {
         if (Fail) throw new InvalidCvFileException("The file could not be read as a valid PDF.");
-        return new ParsedCv("parsed text", 2);
+        return new ParsedCv(Text, 2);
     }
 }
 
 public class FakeJobPostingRepository : IJobPostingRepository
 {
-    public List<(JobPosting Job, float[] Embedding)> Jobs { get; } = [];
+    public List<(JobPosting Job, IReadOnlyList<TermEmbedding> Terms)> Jobs { get; } = [];
 
-    public Task AddAsync(JobPosting job, float[] embedding, CancellationToken ct)
+    public Task AddAsync(JobPosting job, IReadOnlyList<TermEmbedding> terms, CancellationToken ct)
     {
-        Jobs.Add((job, embedding));
+        Jobs.Add((job, terms));
         return Task.CompletedTask;
     }
 
@@ -98,42 +99,53 @@ public class FakeJobPostingRepository : IJobPostingRepository
     public Task<List<JobPosting>> GetAllAsync(Guid ownerId, CancellationToken ct) =>
         Task.FromResult(Owned(ownerId).Select(j => j.Job).ToList());
 
-    public Task<float[]?> GetEmbeddingAsync(Guid ownerId, Guid id, CancellationToken ct) =>
-        Task.FromResult<float[]?>(Owned(ownerId).FirstOrDefault(j => j.Job.Id == id).Embedding);
-
     public Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
         Task.FromResult(Jobs.RemoveAll(j => j.Job.Id == id && j.Job.OwnerId == ownerId) > 0);
 
-    private IEnumerable<(JobPosting Job, float[] Embedding)> Owned(Guid ownerId) =>
+    private IEnumerable<(JobPosting Job, IReadOnlyList<TermEmbedding> Terms)> Owned(Guid ownerId) =>
         Jobs.Where(j => j.Job.OwnerId == ownerId);
 }
 
 public class FakeProfileRepository : IProfileRepository
 {
-    public List<(Profile Profile, float[] Embedding)> Profiles { get; } = [];
+    private readonly FakeJobPostingRepository _jobs;
 
-    public Task AddAsync(Profile profile, float[] embedding, CancellationToken ct)
+    public FakeProfileRepository(FakeJobPostingRepository jobs)
     {
-        Profiles.Add((profile, embedding));
+        _jobs = jobs;
+    }
+
+    public List<(Profile Profile, IReadOnlyList<TermEmbedding> Terms)> Profiles { get; } = [];
+
+    public Task AddAsync(Profile profile, IReadOnlyList<TermEmbedding> terms, CancellationToken ct)
+    {
+        Profiles.Add((profile, terms));
         return Task.CompletedTask;
     }
 
     public Task<bool> ExistsAsync(Guid ownerId, string contentHash, CancellationToken ct) =>
         Task.FromResult(Profiles.Any(p => p.Profile.OwnerId == ownerId && p.Profile.ContentHash == contentHash));
 
-    public Task<RankedProfiles> GetRankedAsync(Guid ownerId, float[] query, int skip, int take, CancellationToken ct)
-    {
-        var owned = Profiles.Where(p => p.Profile.OwnerId == ownerId).ToList();
+    public Task<List<ProfileTermSimilarity>> GetBestSimilaritiesAsync(Guid ownerId, Guid jobPostingId, CancellationToken ct) =>
+        Task.FromResult((
+            from p in Profiles
+            where p.Profile.OwnerId == ownerId
+            from jobTerm in JobTerms(ownerId, jobPostingId)
+            select new ProfileTermSimilarity(
+                p.Profile.Id,
+                p.Profile.FileName,
+                jobTerm.Term,
+                p.Terms.Max(t => Cosine(t.Embedding, jobTerm.Embedding)))).ToList());
 
-        var items = owned
-            .Select(p => new RankedProfile(p.Profile.Id, p.Profile.FileName, Cosine(p.Embedding, query)))
-            .OrderByDescending(p => p.Similarity)
-            .Skip(skip)
-            .Take(take)
-            .ToList();
-
-        return Task.FromResult(new RankedProfiles(owned.Count, items));
-    }
+    public Task<List<TermMatch>> GetCloseTermsAsync(Guid ownerId, Guid jobPostingId, Guid profileId, double minSimilarity, CancellationToken ct) =>
+        Task.FromResult((
+            from p in Profiles
+            where p.Profile.Id == profileId && p.Profile.OwnerId == ownerId
+            from jobTerm in JobTerms(ownerId, jobPostingId)
+            from cvTerm in p.Terms
+            let similarity = Cosine(cvTerm.Embedding, jobTerm.Embedding)
+            where similarity >= minSimilarity
+            select new TermMatch(jobTerm.Term, cvTerm.Term, similarity)).ToList());
 
     public Task<ProfileSummaries> GetPageAsync(Guid ownerId, ProfileFilter filter, int skip, int take, CancellationToken ct)
     {
@@ -165,6 +177,9 @@ public class FakeProfileRepository : IProfileRepository
 
     public Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
         Task.FromResult(Profiles.RemoveAll(p => p.Profile.Id == id && p.Profile.OwnerId == ownerId) > 0);
+
+    private IEnumerable<TermEmbedding> JobTerms(Guid ownerId, Guid jobPostingId) =>
+        _jobs.Jobs.Where(j => j.Job.Id == jobPostingId && j.Job.OwnerId == ownerId).SelectMany(j => j.Terms);
 
     private static double Cosine(float[] a, float[] b)
     {

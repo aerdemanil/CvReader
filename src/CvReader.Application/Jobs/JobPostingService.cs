@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using CvReader.Application.Abstractions;
+using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Jobs;
@@ -31,10 +32,11 @@ public class JobPostingService
                 .ToList()
         };
 
-        // Anahtar kelimeler değişmediği için vektör bir kez alınır ve ilanla birlikte saklanır.
-        var embedding = await _embeddings.EmbedAsync(string.Join(", ", job.Keywords), ct);
+        // Anahtar kelimeler değişmediği için terim vektörleri bir kez alınır ve ilanla birlikte saklanır.
+        var terms = job.Keywords.SelectMany(TermExtractor.ExtractFromKeyword).Distinct().ToList();
+        var embeddings = await _embeddings.EmbedAsync(terms, ct);
 
-        await _jobs.AddAsync(job, embedding, ct);
+        await _jobs.AddAsync(job, embeddings, ct);
         return ToDto(job);
     }
 

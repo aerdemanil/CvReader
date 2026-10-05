@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using CvReader.Application.Abstractions;
 using CvReader.Application.Embeddings;
+using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -48,11 +49,15 @@ public class CvUploadService
             return new CvUploadResult(fileName, null, ex.Message);
         }
 
+        var terms = TermExtractor.Extract(parsed.Text);
+        if (terms.Count == 0)
+            return new CvUploadResult(fileName, null, "The CV contains no readable words.");
+
         // Kayıttan önce alınır; servis yanıt vermezse vektörsüz profil oluşmaz.
-        float[] embedding;
+        List<TermEmbedding> embeddings;
         try
         {
-            embedding = await _embeddings.EmbedAsync(parsed.Text, ct);
+            embeddings = await _embeddings.EmbedAsync(terms, ct);
         }
         catch (EmbeddingException ex)
         {
@@ -73,7 +78,7 @@ public class CvUploadService
 
         try
         {
-            await _profiles.AddAsync(profile, embedding, ct);
+            await _profiles.AddAsync(profile, embeddings, ct);
         }
         catch (ProfileSaveException ex)
         {

@@ -36,6 +36,7 @@ const paths = {
       <path d="M12 8v4M12 16h.01" />
     </>
   ),
+  more: <path d="M5 12h.01M12 12h.01M19 12h.01" />,
   info: (
     <>
       <circle cx="12" cy="12" r="10" />

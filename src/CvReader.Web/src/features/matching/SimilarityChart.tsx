@@ -1,16 +1,19 @@
 import type { MatchResult } from '../../api/types'
 import { Icon } from '../../components/Icon'
+import { Menu } from '../../components/Menu'
 import { formatScore } from '../../utils/format'
 
 const ticks = [0, 25, 50, 75, 100]
 
 interface SimilarityChartProps {
   results: MatchResult[]
+  onPreview: (result: MatchResult) => void
+  onExplain: (result: MatchResult) => void
   onDelete: (result: MatchResult) => void
 }
 
 // Sonuçlar sunucudan skora göre azalan sırada gelir.
-export function SimilarityChart({ results, onDelete }: SimilarityChartProps) {
+export function SimilarityChart({ results, onPreview, onExplain, onDelete }: SimilarityChartProps) {
   return (
     <figure className="chart">
       <ol className="chart-rows">
@@ -24,6 +27,13 @@ export function SimilarityChart({ results, onDelete }: SimilarityChartProps) {
               <span className="chart-bar" style={{ width: `${r.score}%` }} />
             </span>
             <span className="chart-value">{formatScore(r.score)}</span>
+            <Menu
+              label={`${r.fileName} için seçenekler`}
+              items={[
+                { label: 'CV önizleme', icon: 'file', onSelect: () => onPreview(r) },
+                { label: 'Eşleşen kelimeler', icon: 'sparkles', onSelect: () => onExplain(r) },
+              ]}
+            />
             <button
               type="button"
               className="icon-button icon-button-danger"
@@ -46,8 +56,9 @@ export function SimilarityChart({ results, onDelete }: SimilarityChartProps) {
         </span>
         <span />
         <span />
+        <span />
       </div>
-      <figcaption className="muted">Skor, CV’nin ilanın anahtar kelimelerine anlamca ne kadar yakın olduğunu gösterir (0–100).</figcaption>
+      <figcaption className="muted">Skor, ilanın anahtar kelimelerinin ya da anlamca yakınlarının CV’de ne ölçüde geçtiğini gösterir (0–100).</figcaption>
     </figure>
   )
 }

@@ -2,9 +2,11 @@ using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Abstractions;
 
-public record RankedProfile(Guid ProfileId, string FileName, double Similarity);
+// Bir CV'nin terimleri içinde, ilanın JobTerm terimine en yakın olanın cosine benzerliği.
+public record ProfileTermSimilarity(Guid ProfileId, string FileName, string JobTerm, double Similarity);
 
-public record RankedProfiles(int Total, List<RankedProfile> Items);
+// İlanın JobTerm terimi ile CV'nin CvTerm terimi arasındaki cosine benzerliği.
+public record TermMatch(string JobTerm, string CvTerm, double Similarity);
 
 public record ProfileSummary(Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId);
 
@@ -16,11 +18,14 @@ public record ProfileFilter(Guid? FolderId, bool Unfiled, string? Search);
 // Tüm okuma ve silme işlemleri sahibine göre filtrelenir; başkasının CV'si "yok" sayılır.
 public interface IProfileRepository
 {
-    Task AddAsync(Profile profile, float[] embedding, CancellationToken ct);
+    Task AddAsync(Profile profile, IReadOnlyList<TermEmbedding> terms, CancellationToken ct);
     Task<bool> ExistsAsync(Guid ownerId, string contentHash, CancellationToken ct);
 
-    // Sahibin profilleri, sorgu vektörüne cosine benzerliğine göre azalan sırada.
-    Task<RankedProfiles> GetRankedAsync(Guid ownerId, float[] query, int skip, int take, CancellationToken ct);
+    // Sahibin her CV'si ve ilanın her terimi için bir satır.
+    Task<List<ProfileTermSimilarity>> GetBestSimilaritiesAsync(Guid ownerId, Guid jobPostingId, CancellationToken ct);
+
+    // Tek bir CV'nin, ilanın terimlerine en az minSimilarity kadar yakın olan terimleri.
+    Task<List<TermMatch>> GetCloseTermsAsync(Guid ownerId, Guid jobPostingId, Guid profileId, double minSimilarity, CancellationToken ct);
 
     // Yeniden eskiye sıralı; CV metni içermez.
     Task<ProfileSummaries> GetPageAsync(Guid ownerId, ProfileFilter filter, int skip, int take, CancellationToken ct);

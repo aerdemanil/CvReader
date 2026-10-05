@@ -4,7 +4,9 @@ import type { JobPosting, MatchResult } from '../../api/types'
 import { Alert } from '../../components/Alert'
 import { Icon } from '../../components/Icon'
 import { Spinner } from '../../components/Spinner'
+import { CvViewDialog } from '../cvs/CvViewDialog'
 import { formatDate, formatScore } from '../../utils/format'
+import { MatchDetailDialog } from './MatchDetailDialog'
 import { SimilarityChart } from './SimilarityChart'
 import { useMatchResults } from './useMatchResults'
 
@@ -18,6 +20,8 @@ export function MatchPanel({ job, refreshKey, onDeleteJob }: MatchPanelProps) {
   const { results, total, hasMore, loadingMore, error, loadMore, removeCv } = useMatchResults(job.id, refreshKey)
   const [deletingJob, setDeletingJob] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [previewing, setPreviewing] = useState<MatchResult | null>(null)
+  const [explaining, setExplaining] = useState<MatchResult | null>(null)
 
   async function handleDeleteJob() {
     if (!window.confirm(`“${job.title}” ilanı silinsin mi? Yüklediğiniz CV’ler silinmez.`)) return
@@ -70,8 +74,16 @@ export function MatchPanel({ job, refreshKey, onDeleteJob }: MatchPanelProps) {
         hasMore={hasMore}
         loadingMore={loadingMore}
         onLoadMore={loadMore}
+        onPreviewCv={setPreviewing}
+        onExplainCv={setExplaining}
         onDeleteCv={handleDeleteCv}
       />
+
+      <CvViewDialog
+        cv={previewing && { id: previewing.profileId, fileName: previewing.fileName }}
+        onClose={() => setPreviewing(null)}
+      />
+      <MatchDetailDialog job={job} result={explaining} onClose={() => setExplaining(null)} />
     </div>
   )
 }
@@ -82,10 +94,12 @@ interface PanelBodyProps {
   hasMore: boolean
   loadingMore: boolean
   onLoadMore: () => void
+  onPreviewCv: (result: MatchResult) => void
+  onExplainCv: (result: MatchResult) => void
   onDeleteCv: (result: MatchResult) => void
 }
 
-function PanelBody({ results, total, hasMore, loadingMore, onLoadMore, onDeleteCv }: PanelBodyProps) {
+function PanelBody({ results, total, hasMore, loadingMore, onLoadMore, onPreviewCv, onExplainCv, onDeleteCv }: PanelBodyProps) {
   if (results === null) {
     return (
       <div className="card empty-state">
@@ -115,7 +129,7 @@ function PanelBody({ results, total, hasMore, loadingMore, onLoadMore, onDeleteC
       </div>
       <section className="card">
         <h2 className="card-title">Yakınlık grafiği</h2>
-        <SimilarityChart results={results} onDelete={onDeleteCv} />
+        <SimilarityChart results={results} onPreview={onPreviewCv} onExplain={onExplainCv} onDelete={onDeleteCv} />
         {hasMore && (
           <div className="chart-more">
             <button type="button" className="button" onClick={onLoadMore} disabled={loadingMore}>

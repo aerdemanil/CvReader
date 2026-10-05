@@ -27,16 +27,17 @@ public class JobPostingServiceTests
     }
 
     [Fact]
-    public async Task Create_embeds_the_keywords_once_and_stores_the_vector_with_the_job()
+    public async Task Create_embeds_every_term_of_the_keywords_once_and_stores_the_vectors_with_the_job()
     {
         _embeddings.Result = [0.5f, 0.5f];
 
-        await _service.CreateAsync(Owner, "Backend", ["Java", "Kotlin"], CancellationToken.None);
+        await _service.CreateAsync(Owner, "Backend", ["Java", "SQL Server", "sql"], CancellationToken.None);
 
-        Assert.Equal(["Java, Kotlin"], _embeddings.Inputs);
+        Assert.Equal(["java", "sql", "server"], Assert.Single(_embeddings.Inputs));
         var stored = Assert.Single(_jobs.Jobs);
         Assert.Equal(Owner, stored.Job.OwnerId);
-        Assert.Equal([0.5f, 0.5f], stored.Embedding);
+        Assert.Equal(["java", "sql", "server"], stored.Terms.Select(t => t.Term));
+        Assert.All(stored.Terms, t => Assert.Equal([0.5f, 0.5f], t.Embedding));
     }
 
     [Fact]

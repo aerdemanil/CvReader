@@ -11,7 +11,7 @@ public class CvLibraryAndFolderTests
     private static readonly Guid Stranger = Guid.NewGuid();
     private static readonly ProfileFilter All = new(null, false, null);
 
-    private readonly FakeProfileRepository _profiles = new();
+    private readonly FakeProfileRepository _profiles = new(new FakeJobPostingRepository());
     private readonly FakeFolderRepository _folderRepository;
     private readonly FolderService _folders;
     private readonly CvLibraryService _library;
@@ -26,7 +26,7 @@ public class CvLibraryAndFolderTests
     private Guid AddCv(Guid ownerId, string fileName, Guid? folderId = null)
     {
         var profile = new Profile { Id = Guid.NewGuid(), OwnerId = ownerId, FolderId = folderId, FileName = fileName, RawText = $"text of {fileName}" };
-        _profiles.Profiles.Add((profile, [1, 0]));
+        _profiles.Profiles.Add((profile, []));
         return profile.Id;
     }
 

@@ -1,5 +1,5 @@
 import { request } from './http'
-import type { CreateJobRequest, JobPosting, MatchPage } from './types'
+import type { CreateJobRequest, JobPosting, MatchDetail, MatchPage } from './types'
 
 export const RESULTS_PAGE_SIZE = 50
 
@@ -14,4 +14,7 @@ export const jobsApi = {
 
   getResults: (id: string, page: number, signal?: AbortSignal) =>
     request<MatchPage>(`${jobPath(id)}/results?page=${page}&pageSize=${RESULTS_PAGE_SIZE}`, { signal }),
+
+  getMatchDetail: (id: string, profileId: string, signal?: AbortSignal) =>
+    request<MatchDetail>(`${jobPath(id)}/results/${encodeURIComponent(profileId)}`, { signal }),
 }

@@ -14,14 +14,15 @@ public class JobPostingRepository : IJobPostingRepository
         _db = db;
     }
 
-    public async Task AddAsync(JobPosting job, float[] embedding, CancellationToken ct)
+    public async Task AddAsync(JobPosting job, IReadOnlyList<TermEmbedding> terms, CancellationToken ct)
     {
         _db.JobPostings.Add(job);
-        _db.JobPostingEmbeddings.Add(new JobPostingEmbedding
+        _db.JobPostingTerms.AddRange(terms.Select(t => new JobPostingTerm
         {
             JobPostingId = job.Id,
-            Embedding = new Vector(embedding)
-        });
+            Term = t.Term,
+            Embedding = new Vector(t.Embedding)
+        }));
         await _db.SaveChangesAsync(ct);
     }
 
@@ -35,17 +36,7 @@ public class JobPostingRepository : IJobPostingRepository
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(ct);
 
-    public async Task<float[]?> GetEmbeddingAsync(Guid ownerId, Guid id, CancellationToken ct)
-    {
-        var embedding = await _db.JobPostings
-            .Where(j => j.Id == id && j.OwnerId == ownerId)
-            .Join(_db.JobPostingEmbeddings, j => j.Id, e => e.JobPostingId, (_, e) => e.Embedding)
-            .FirstOrDefaultAsync(ct);
-
-        return embedding?.ToArray();
-    }
-
-    // Vektör satırı veritabanındaki cascade ile birlikte silinir.
+    // Terim satırları veritabanındaki cascade ile birlikte silinir.
     public async Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
         await _db.JobPostings
             .Where(j => j.Id == id && j.OwnerId == ownerId)

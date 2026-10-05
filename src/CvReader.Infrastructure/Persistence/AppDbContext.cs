@@ -1,3 +1,4 @@
+using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
 using CvReader.Infrastructure.Embeddings;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<JobPosting> JobPostings => Set<JobPosting>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<ProfileEmbedding> ProfileEmbeddings => Set<ProfileEmbedding>();
-    public DbSet<JobPostingEmbedding> JobPostingEmbeddings => Set<JobPostingEmbedding>();
+    public DbSet<ProfileTerm> ProfileTerms => Set<ProfileTerm>();
+    public DbSet<JobPostingTerm> JobPostingTerms => Set<JobPostingTerm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,14 +36,15 @@ public class AppDbContext : DbContext
             entity.HasIndex(j => new { j.OwnerId, j.CreatedAt });
         });
 
-        modelBuilder.Entity<JobPostingEmbedding>(entity =>
+        modelBuilder.Entity<JobPostingTerm>(entity =>
         {
-            entity.HasKey(e => e.JobPostingId);
-            entity.Property(e => e.Embedding).HasColumnType(VectorColumnType);
+            entity.HasKey(t => new { t.JobPostingId, t.Term });
+            entity.Property(t => t.Term).HasMaxLength(TermExtractor.MaxTermLength);
+            entity.Property(t => t.Embedding).HasColumnType(VectorColumnType);
 
             entity.HasOne<JobPosting>()
-                .WithOne()
-                .HasForeignKey<JobPostingEmbedding>(e => e.JobPostingId)
+                .WithMany()
+                .HasForeignKey(t => t.JobPostingId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -78,14 +80,16 @@ public class AppDbContext : DbContext
             entity.HasIndex(f => new { f.OwnerId, f.Name }).IsUnique();
         });
 
-        modelBuilder.Entity<ProfileEmbedding>(entity =>
+        modelBuilder.Entity<ProfileTerm>(entity =>
         {
-            entity.HasKey(e => e.ProfileId);
-            entity.Property(e => e.Embedding).HasColumnType(VectorColumnType);
+            // Bir CV'nin terimleri bu anahtar üzerinden okunur.
+            entity.HasKey(t => new { t.ProfileId, t.Term });
+            entity.Property(t => t.Term).HasMaxLength(TermExtractor.MaxTermLength);
+            entity.Property(t => t.Embedding).HasColumnType(VectorColumnType);
 
             entity.HasOne<Profile>()
-                .WithOne()
-                .HasForeignKey<ProfileEmbedding>(e => e.ProfileId)
+                .WithMany()
+                .HasForeignKey(t => t.ProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
