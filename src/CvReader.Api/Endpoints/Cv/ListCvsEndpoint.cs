@@ -40,7 +40,7 @@ public class ListCvsEndpoint : Endpoint<ListCvsRequest, CvPageDto>
         Summary(s =>
         {
             s.Summary = "List the signed-in user's CVs, newest first";
-            s.Description = "Filter by folder (folderId), by unfiled CVs (unfiled=true) or by file name (search). Paged.";
+            s.Description = "Filter by folder (folderId), by unfiled CVs (unfiled=true) or by file name, candidate name or email (search). Paged.";
         });
     }
 

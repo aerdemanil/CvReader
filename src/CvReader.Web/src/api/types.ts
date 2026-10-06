@@ -22,9 +22,11 @@ export interface CreateJobRequest {
   keywords: string[]
 }
 
+// fullName: CV'den çıkarılan aday adı; çıkarım bitene kadar ya da bulunamazsa null.
 export interface MatchResult {
   profileId: string
   fileName: string
+  fullName: string | null
   score: number
 }
 
@@ -61,12 +63,16 @@ export interface FolderList {
   unfiledCount: number
 }
 
+// fullName, email ve phone arka planda çıkarılır; çıkarım bitene kadar ya da bulunamazsa null.
 export interface CvSummary {
   id: string
   fileName: string
   pageCount: number
   createdAt: string
   folderId: string | null
+  fullName: string | null
+  email: string | null
+  phone: string | null
 }
 
 export interface CvPage {

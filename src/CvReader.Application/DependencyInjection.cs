@@ -13,6 +13,7 @@ public static class DependencyInjection
     {
         services.AddScoped<CvUploadService>();
         services.AddScoped<CvLibraryService>();
+        services.AddScoped<CvFieldExtractionService>();
         services.AddScoped<FolderService>();
         services.AddScoped<JobPostingService>();
         services.AddScoped<MatchingService>();

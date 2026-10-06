@@ -37,7 +37,7 @@ export function MatchPanel({ job, refreshKey, onDeleteJob }: MatchPanelProps) {
   }
 
   function handleDeleteCv(result: MatchResult) {
-    if (window.confirm(`“${result.fileName}” kalıcı olarak silinsin mi? CV tüm ilanların sonuçlarından kalkar.`)) {
+    if (window.confirm(`“${result.fullName ?? result.fileName}” kalıcı olarak silinsin mi? CV tüm ilanların sonuçlarından kalkar.`)) {
       void removeCv(result.profileId)
     }
   }
@@ -80,7 +80,7 @@ export function MatchPanel({ job, refreshKey, onDeleteJob }: MatchPanelProps) {
       />
 
       <CvViewDialog
-        cv={previewing && { id: previewing.profileId, fileName: previewing.fileName }}
+        cv={previewing && { id: previewing.profileId, fileName: previewing.fileName, fullName: previewing.fullName }}
         onClose={() => setPreviewing(null)}
       />
       <MatchDetailDialog job={job} result={explaining} onClose={() => setExplaining(null)} />

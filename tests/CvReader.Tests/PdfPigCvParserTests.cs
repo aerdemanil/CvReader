@@ -35,6 +35,22 @@ public class PdfPigCvParserTests
     }
 
     [Fact]
+    public void Lines_of_the_page_stay_on_separate_lines()
+    {
+        var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+        var page = builder.AddPage(PageSize.A4);
+        page.AddText("Ada Lovelace", 18, new PdfPoint(25, 700), font);
+        page.AddText("Senior backend developer", 12, new PdfPoint(25, 680), font);
+
+        var parsed = _parser.Parse(new MemoryStream(builder.Build()));
+
+        Assert.Equal(
+            ["Ada Lovelace", "Senior backend developer"],
+            parsed.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    [Fact]
     public void File_without_pdf_signature_is_rejected()
     {
         var stream = new MemoryStream("PK\u0003\u0004 this is a zip file"u8.ToArray());

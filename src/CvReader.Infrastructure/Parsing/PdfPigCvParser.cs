@@ -1,6 +1,7 @@
 using System.Text;
 using CvReader.Application.Cv;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
 
 namespace CvReader.Infrastructure.Parsing;
 
@@ -27,10 +28,7 @@ public class PdfPigCvParser : ICvParser
             var text = new StringBuilder();
 
             foreach (var page in document.GetPages())
-            {
-                var words = page.GetWords().Select(w => w.Text);
-                text.AppendLine(string.Join(" ", words));
-            }
+                AppendLines(text, page.GetWords());
 
             // PostgreSQL text kolonları \0 karakterini kabul etmez; bazı PDF'ler bunu üretir.
             var cleanText = text.ToString().Replace("\0", string.Empty);
@@ -46,6 +44,30 @@ public class PdfPigCvParser : ICvParser
         {
             throw new InvalidCvFileException("The file could not be read as a valid PDF.", ex);
         }
+    }
+
+    // Aynı satırdaki kelimeler boşlukla ayrılır; taban çizgisi değişince yeni satıra geçilir.
+    private static void AppendLines(StringBuilder text, IEnumerable<Word> words)
+    {
+        Letter? previous = null;
+
+        foreach (var word in words)
+        {
+            var first = word.Letters[0];
+
+            if (previous is not null)
+            {
+                if (Math.Abs(first.StartBaseLine.Y - previous.StartBaseLine.Y) > first.PointSize / 2)
+                    text.AppendLine();
+                else
+                    text.Append(' ');
+            }
+
+            text.Append(word.Text);
+            previous = first;
+        }
+
+        text.AppendLine();
     }
 
     private static bool HasPdfSignature(Stream stream)

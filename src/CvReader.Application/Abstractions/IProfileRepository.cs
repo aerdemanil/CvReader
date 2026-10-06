@@ -3,19 +3,26 @@ using CvReader.Domain.Entities;
 namespace CvReader.Application.Abstractions;
 
 // Bir CV'nin terimleri içinde, ilanın JobTerm terimine en yakın olanın cosine benzerliği.
-public record ProfileTermSimilarity(Guid ProfileId, string FileName, string JobTerm, double Similarity);
+public record ProfileTermSimilarity(Guid ProfileId, string FileName, string? FullName, string JobTerm, double Similarity);
 
 // İlanın JobTerm terimi ile CV'nin CvTerm terimi arasındaki cosine benzerliği.
 public record TermMatch(string JobTerm, string CvTerm, double Similarity);
 
-public record ProfileSummary(Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId);
+public record ProfileSummary(
+    Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId, string? FullName, string? Email, string? Phone);
 
 public record ProfileSummaries(int Total, List<ProfileSummary> Items);
 
 // Unfiled: yalnızca klasörsüz CV'ler. FolderId ve Unfiled boşsa tüm CV'ler listelenir.
+// Search: dosya adı, aday adı ya da e-posta içinde aranır.
 public record ProfileFilter(Guid? FolderId, bool Unfiled, string? Search);
 
+public record PendingExtraction(Guid Id, string RawText);
+
+public record ExtractedCvFields(string? FullName, string? Email, string? Phone);
+
 // Tüm okuma ve silme işlemleri sahibine göre filtrelenir; başkasının CV'si "yok" sayılır.
+// Tek istisna alan çıkarımıdır: arka plan işi tüm kullanıcıların CV'lerini işler, kullanıcı isteğinden çağrılmaz.
 public interface IProfileRepository
 {
     Task AddAsync(Profile profile, IReadOnlyList<TermEmbedding> terms, CancellationToken ct);
@@ -34,4 +41,10 @@ public interface IProfileRepository
     // folderId null ise CV'ler klasörden çıkarılır.
     Task MoveAsync(Guid ownerId, IReadOnlyCollection<Guid> ids, Guid? folderId, CancellationToken ct);
     Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct);
+
+    // Alanları henüz çıkarılmamış CV'ler, eskiden yeniye.
+    Task<List<PendingExtraction>> GetPendingExtractionAsync(int take, CancellationToken ct);
+
+    // Yalnızca hâlâ bekleyen CV'ye yazar; bu arada silinmiş ya da işlenmiş CV'de hiçbir şey yapmaz.
+    Task SaveExtractedFieldsAsync(Guid id, ExtractedCvFields fields, DateTime extractedAt, CancellationToken ct);
 }

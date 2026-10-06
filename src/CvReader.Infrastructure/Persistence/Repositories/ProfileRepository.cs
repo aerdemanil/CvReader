@@ -55,13 +55,14 @@ public class ProfileRepository : IProfileRepository
             {
                 profile.Id,
                 profile.FileName,
+                profile.FullName,
                 jobTerm.Term,
                 Distance = _db.ProfileTerms
                     .Where(t => t.ProfileId == profile.Id)
                     .Min(t => (double?)t.Embedding.CosineDistance(jobTerm.Embedding))
             }).ToListAsync(ct);
 
-        return rows.Select(x => new ProfileTermSimilarity(x.Id, x.FileName, x.Term, 1 - (x.Distance ?? 1))).ToList();
+        return rows.Select(x => new ProfileTermSimilarity(x.Id, x.FileName, x.FullName, x.Term, 1 - (x.Distance ?? 1))).ToList();
     }
 
     public async Task<List<TermMatch>> GetCloseTermsAsync(Guid ownerId, Guid jobPostingId, Guid profileId, double minSimilarity, CancellationToken ct)
@@ -96,7 +97,11 @@ public class ProfileRepository : IProfileRepository
             // Kullanıcının yazdığı % ve _ karakterleri joker değil, düz metin olarak aranır.
             var escaped = filter.Search.Trim().Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
             // Npgsql kaçış karakteri açıkça verilmezse ILIKE'ı kaçışsız (ESCAPE '') üretir.
-            query = query.Where(p => EF.Functions.ILike(p.FileName, $"%{escaped}%", @"\"));
+            var pattern = $"%{escaped}%";
+            query = query.Where(p =>
+                EF.Functions.ILike(p.FileName, pattern, @"\")
+                || EF.Functions.ILike(p.FullName!, pattern, @"\")
+                || EF.Functions.ILike(p.Email!, pattern, @"\"));
         }
 
         var total = await query.CountAsync(ct);
@@ -106,7 +111,7 @@ public class ProfileRepository : IProfileRepository
             .ThenBy(p => p.Id)
             .Skip(skip)
             .Take(take)
-            .Select(p => new ProfileSummary(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId))
+            .Select(p => new ProfileSummary(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId, p.FullName, p.Email, p.Phone))
             .ToListAsync(ct);
 
         return new ProfileSummaries(total, items);
@@ -125,4 +130,22 @@ public class ProfileRepository : IProfileRepository
         await _db.Profiles
             .Where(p => p.Id == id && p.OwnerId == ownerId)
             .ExecuteDeleteAsync(ct) > 0;
+
+    public Task<List<PendingExtraction>> GetPendingExtractionAsync(int take, CancellationToken ct) =>
+        _db.Profiles
+            .AsNoTracking()
+            .Where(p => p.FieldsExtractedAt == null)
+            .OrderBy(p => p.CreatedAt)
+            .Take(take)
+            .Select(p => new PendingExtraction(p.Id, p.RawText))
+            .ToListAsync(ct);
+
+    public Task SaveExtractedFieldsAsync(Guid id, ExtractedCvFields fields, DateTime extractedAt, CancellationToken ct) =>
+        _db.Profiles
+            .Where(p => p.Id == id && p.FieldsExtractedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.FullName, fields.FullName)
+                .SetProperty(p => p.Email, fields.Email)
+                .SetProperty(p => p.Phone, fields.Phone)
+                .SetProperty(p => p.FieldsExtractedAt, extractedAt), ct);
 }
