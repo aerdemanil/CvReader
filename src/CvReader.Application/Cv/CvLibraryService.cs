@@ -2,11 +2,14 @@ using CvReader.Application.Abstractions;
 
 namespace CvReader.Application.Cv;
 
-public record CvSummaryDto(Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId);
+// FullName, Email ve Phone arka planda çıkarılır; çıkarım bitene kadar ya da bulunamazsa null'dır.
+public record CvSummaryDto(
+    Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId, string? FullName, string? Email, string? Phone);
 
 public record CvPageDto(int Total, List<CvSummaryDto> Items);
 
-public record CvDetailDto(Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId, string Text);
+public record CvDetailDto(
+    Guid Id, string FileName, int PageCount, DateTime CreatedAt, Guid? FolderId, string? FullName, string? Email, string? Phone, string Text);
 
 public class CvLibraryService
 {
@@ -24,7 +27,7 @@ public class CvLibraryService
         var profiles = await _profiles.GetPageAsync(ownerId, filter, (page - 1) * pageSize, pageSize, ct);
 
         var items = profiles.Items
-            .Select(p => new CvSummaryDto(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId))
+            .Select(p => new CvSummaryDto(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId, p.FullName, p.Email, p.Phone))
             .ToList();
 
         return new CvPageDto(profiles.Total, items);
@@ -37,7 +40,9 @@ public class CvLibraryService
 
         return profile is null
             ? null
-            : new CvDetailDto(profile.Id, profile.FileName, profile.PageCount, profile.CreatedAt, profile.FolderId, profile.RawText);
+            : new CvDetailDto(
+                profile.Id, profile.FileName, profile.PageCount, profile.CreatedAt, profile.FolderId,
+                profile.FullName, profile.Email, profile.Phone, profile.RawText);
     }
 
     // folderId null ise CV'ler klasörden çıkarılır. Hedef klasör bulunamazsa false döner.

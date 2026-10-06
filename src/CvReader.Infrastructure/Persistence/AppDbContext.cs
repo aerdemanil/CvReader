@@ -1,3 +1,4 @@
+using CvReader.Application.Cv;
 using CvReader.Application.Matching;
 using CvReader.Domain.Entities;
 using CvReader.Infrastructure.Embeddings;
@@ -52,6 +53,9 @@ public class AppDbContext : DbContext
         {
             entity.Property(p => p.FileName).HasMaxLength(260);
             entity.Property(p => p.ContentHash).HasMaxLength(64); // SHA-256 hex
+            entity.Property(p => p.FullName).HasMaxLength(CvFieldExtractionService.MaxNameLength);
+            entity.Property(p => p.Email).HasMaxLength(ContactExtractor.MaxEmailLength);
+            entity.Property(p => p.Phone).HasMaxLength(ContactExtractor.MaxPhoneLength);
 
             entity.HasOne<User>()
                 .WithMany()
@@ -66,6 +70,11 @@ public class AppDbContext : DbContext
 
             // Aynı kullanıcı aynı dosyayı iki kez kaydedemez; sahibine göre filtrelemeyi de karşılar.
             entity.HasIndex(p => new { p.OwnerId, p.ContentHash }).IsUnique();
+
+            // Yalnızca alan çıkarımı bekleyen CV'leri içerir; kuyruk boşken indeks de boştur.
+            entity.HasIndex(p => p.CreatedAt)
+                .HasFilter("\"FieldsExtractedAt\" IS NULL")
+                .HasDatabaseName("IX_Profiles_PendingExtraction");
         });
 
         modelBuilder.Entity<Folder>(entity =>

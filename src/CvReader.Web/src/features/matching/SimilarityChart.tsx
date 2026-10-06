@@ -17,34 +17,38 @@ export function SimilarityChart({ results, onPreview, onExplain, onDelete }: Sim
   return (
     <figure className="chart">
       <ol className="chart-rows">
-        {results.map((r, index) => (
-          <li key={r.profileId} className="chart-row" aria-label={`${index + 1}. ${r.fileName}: ${formatScore(r.score)} / 100`}>
-            <span className="chart-rank">{index + 1}</span>
-            <span className="chart-label" title={r.fileName}>
-              {r.fileName}
-            </span>
-            <span className="chart-track">
-              <span className="chart-bar" style={{ width: `${r.score}%` }} />
-            </span>
-            <span className="chart-value">{formatScore(r.score)}</span>
-            <Menu
-              label={`${r.fileName} için seçenekler`}
-              items={[
-                { label: 'CV önizleme', icon: 'file', onSelect: () => onPreview(r) },
-                { label: 'Eşleşen kelimeler', icon: 'sparkles', onSelect: () => onExplain(r) },
-              ]}
-            />
-            <button
-              type="button"
-              className="icon-button icon-button-danger"
-              aria-label={`${r.fileName} CV’sini sil`}
-              title="CV’yi sil"
-              onClick={() => onDelete(r)}
-            >
-              <Icon name="trash" size={16} />
-            </button>
-          </li>
-        ))}
+        {results.map((r, index) => {
+          // Aday adı henüz çıkarılmadıysa ya da bulunamadıysa dosya adı gösterilir.
+          const name = r.fullName ?? r.fileName
+          return (
+            <li key={r.profileId} className="chart-row" aria-label={`${index + 1}. ${name}: ${formatScore(r.score)} / 100`}>
+              <span className="chart-rank">{index + 1}</span>
+              <span className="chart-label" title={r.fileName}>
+                {name}
+              </span>
+              <span className="chart-track">
+                <span className="chart-bar" style={{ width: `${r.score}%` }} />
+              </span>
+              <span className="chart-value">{formatScore(r.score)}</span>
+              <Menu
+                label={`${name} için seçenekler`}
+                items={[
+                  { label: 'CV önizleme', icon: 'file', onSelect: () => onPreview(r) },
+                  { label: 'Eşleşen kelimeler', icon: 'sparkles', onSelect: () => onExplain(r) },
+                ]}
+              />
+              <button
+                type="button"
+                className="icon-button icon-button-danger"
+                aria-label={`${name} CV’sini sil`}
+                title="CV’yi sil"
+                onClick={() => onDelete(r)}
+              >
+                <Icon name="trash" size={16} />
+              </button>
+            </li>
+          )
+        })}
       </ol>
       <div className="chart-axis" aria-hidden="true">
         <span />

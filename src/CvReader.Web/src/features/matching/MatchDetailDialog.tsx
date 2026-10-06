@@ -20,7 +20,7 @@ export function MatchDetailDialog({ job, result, onClose }: MatchDetailDialogPro
       open={result !== null}
       onClose={onClose}
       title="Eşleşen kelimeler"
-      description={result ? `${result.fileName} · skor ${formatScore(result.score)}` : undefined}
+      description={result ? `${result.fullName ?? result.fileName} · skor ${formatScore(result.score)}` : undefined}
     >
       {result && <KeywordMatches key={result.profileId} jobId={job.id} profileId={result.profileId} />}
     </Dialog>

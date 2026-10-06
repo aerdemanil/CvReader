@@ -4,6 +4,8 @@ Toplu yüklenen PDF CV'leri, bir iş ilanının anahtar kelimelerine anlamsal ya
 Metinler yerelde çalışan bir embedding modeliyle (Ollama + bge-m3) vektöre çevrilir, yakınlık
 PostgreSQL üzerinde pgvector ile hesaplanır. Her kullanıcı yalnızca kendi ilanlarını ve CV'lerini görür;
 CV'ler klasörlere ayrılabilir, çıkarılan metinleri görüntülenebilir ve silinebilir.
+Adayın adı, e-postası ve telefonu yüklemeden sonra arka planda CV metninden çıkarılır: e-posta ve telefon
+kalıp eşleştirmeyle, isim yerelde çalışan bir sohbet modeliyle.
 
 ## Yapı
 
@@ -21,7 +23,7 @@ CV'ler klasörlere ayrılabilir, çıkarılan metinleri görüntülenebilir ve s
 - .NET SDK 10
 - Node.js 24
 - Docker (PostgreSQL + pgvector için)
-- [Ollama](https://ollama.com) ve `bge-m3` modeli
+- [Ollama](https://ollama.com), `bge-m3` ve `gemma3:4b` modelleri
 
 ## Kurulum
 
@@ -29,8 +31,9 @@ CV'ler klasörlere ayrılabilir, çıkarılan metinleri görüntülenebilir ve s
 # 1. Veritabanı (yalnızca 127.0.0.1:5433 üzerinden erişilir)
 docker compose up -d
 
-# 2. Embedding modeli
+# 2. Embedding modeli ve aday adını çıkaran sohbet modeli
 ollama pull bge-m3
+ollama pull gemma3:4b
 
 # 3. Sırlar (depoya girmez)
 cd src/CvReader.Api
@@ -79,6 +82,7 @@ cd src/CvReader.Web && npm run lint && npm run build
 | `Jwt:ExpiryMinutes` | `60` | Oturum süresi |
 | `Ollama:BaseUrl` | `http://localhost:11434` | |
 | `Ollama:Model` | `bge-m3` | Vektör boyutu 1024'e sabittir; farklı boyutlu model migration gerektirir |
+| `Ollama:ChatModel` | `gemma3:4b` | Aday adını çıkarır; Ollama'daki herhangi bir sohbet modeli olabilir |
 | `Ollama:TimeoutSeconds` | `90` | |
 | `ForwardedHeaders:KnownProxies` | boş | Ters vekil arkasındaysa vekilin IP adresleri; hız sınırı gerçek istemci IP'sini bundan öğrenir |
 
@@ -89,3 +93,5 @@ Eksik zorunlu ayarlar uygulama açılırken hata verir.
 - Yükleme: istek başına en çok 50 dosya, dosya başına 10 MB ve 50 sayfa; istek gövdesi Kestrel varsayılanıyla ~28 MB.
 - Taranmış (metin içermeyen) ve şifreli PDF'ler reddedilir.
 - Aynı dosya aynı kullanıcı tarafından ikinci kez yüklenemez.
+- Aday bilgileri yüklemeden kısa süre sonra görünür; sohbet modeline ulaşılamazsa CV yine kaydedilir ve çıkarım
+  model yeniden erişilebilir olduğunda tamamlanır. Bulunamayan alan boş kalır, listede dosya adı gösterilir.

@@ -1,6 +1,7 @@
 using CvReader.Application.Abstractions;
 using CvReader.Application.Cv;
 using CvReader.Infrastructure.Embeddings;
+using CvReader.Infrastructure.Extraction;
 using CvReader.Infrastructure.Parsing;
 using CvReader.Infrastructure.Persistence;
 using CvReader.Infrastructure.Persistence.Repositories;
@@ -36,17 +37,23 @@ public static class DependencyInjection
         services.AddOptions<OllamaOptions>()
             .Bind(configuration.GetSection(OllamaOptions.SectionName))
             .Validate(
-                o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _) && !string.IsNullOrWhiteSpace(o.Model) && o.TimeoutSeconds > 0,
-                "Ollama:BaseUrl must be an absolute URL, Ollama:Model must be set and Ollama:TimeoutSeconds must be positive.")
+                o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _)
+                     && !string.IsNullOrWhiteSpace(o.Model)
+                     && !string.IsNullOrWhiteSpace(o.ChatModel)
+                     && o.TimeoutSeconds > 0,
+                "Ollama:BaseUrl must be an absolute URL, Ollama:Model and Ollama:ChatModel must be set and Ollama:TimeoutSeconds must be positive.")
             .ValidateOnStart();
 
-        services.AddHttpClient<IEmbeddingService, OllamaEmbeddingService>((sp, client) =>
-        {
-            var options = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
-            client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-        });
+        services.AddHttpClient<IEmbeddingService, OllamaEmbeddingService>(ConfigureOllamaClient);
+        services.AddHttpClient<ICvNameExtractor, OllamaCvNameExtractor>(ConfigureOllamaClient);
 
         return services;
+    }
+
+    private static void ConfigureOllamaClient(IServiceProvider sp, HttpClient client)
+    {
+        var options = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
     }
 }

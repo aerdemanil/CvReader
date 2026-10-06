@@ -83,6 +83,20 @@ public class FakeCvParser : ICvParser
     }
 }
 
+public class FakeCvNameExtractor : ICvNameExtractor
+{
+    public List<string> Inputs { get; } = [];
+    public string? Result { get; set; }
+    public bool Fail { get; set; }
+
+    public Task<string?> ExtractNameAsync(string cvHead, CancellationToken ct)
+    {
+        Inputs.Add(cvHead);
+        if (Fail) throw new CvNameExtractionException("The name extraction service is not reachable.");
+        return Task.FromResult(Result);
+    }
+}
+
 public class FakeJobPostingRepository : IJobPostingRepository
 {
     public List<(JobPosting Job, IReadOnlyList<TermEmbedding> Terms)> Jobs { get; } = [];
@@ -134,6 +148,7 @@ public class FakeProfileRepository : IProfileRepository
             select new ProfileTermSimilarity(
                 p.Profile.Id,
                 p.Profile.FileName,
+                p.Profile.FullName,
                 jobTerm.Term,
                 p.Terms.Max(t => Cosine(t.Embedding, jobTerm.Embedding)))).ToList());
 
@@ -153,13 +168,14 @@ public class FakeProfileRepository : IProfileRepository
             .Select(p => p.Profile)
             .Where(p => p.OwnerId == ownerId)
             .Where(p => filter.Unfiled ? p.FolderId is null : filter.FolderId is null || p.FolderId == filter.FolderId)
-            .Where(p => string.IsNullOrWhiteSpace(filter.Search) || p.FileName.Contains(filter.Search, StringComparison.OrdinalIgnoreCase))
+            .Where(p => string.IsNullOrWhiteSpace(filter.Search)
+                || new[] { p.FileName, p.FullName, p.Email }.Any(v => v?.Contains(filter.Search, StringComparison.OrdinalIgnoreCase) == true))
             .ToList();
 
         var items = matching
             .Skip(skip)
             .Take(take)
-            .Select(p => new ProfileSummary(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId))
+            .Select(p => new ProfileSummary(p.Id, p.FileName, p.PageCount, p.CreatedAt, p.FolderId, p.FullName, p.Email, p.Phone))
             .ToList();
 
         return Task.FromResult(new ProfileSummaries(matching.Count, items));
@@ -177,6 +193,27 @@ public class FakeProfileRepository : IProfileRepository
 
     public Task<bool> DeleteAsync(Guid ownerId, Guid id, CancellationToken ct) =>
         Task.FromResult(Profiles.RemoveAll(p => p.Profile.Id == id && p.Profile.OwnerId == ownerId) > 0);
+
+    public Task<List<PendingExtraction>> GetPendingExtractionAsync(int take, CancellationToken ct) =>
+        Task.FromResult(Profiles
+            .Select(p => p.Profile)
+            .Where(p => p.FieldsExtractedAt is null)
+            .OrderBy(p => p.CreatedAt)
+            .Take(take)
+            .Select(p => new PendingExtraction(p.Id, p.RawText))
+            .ToList());
+
+    public Task SaveExtractedFieldsAsync(Guid id, ExtractedCvFields fields, DateTime extractedAt, CancellationToken ct)
+    {
+        foreach (var (profile, _) in Profiles.Where(p => p.Profile.Id == id && p.Profile.FieldsExtractedAt is null))
+        {
+            profile.FullName = fields.FullName;
+            profile.Email = fields.Email;
+            profile.Phone = fields.Phone;
+            profile.FieldsExtractedAt = extractedAt;
+        }
+        return Task.CompletedTask;
+    }
 
     private IEnumerable<TermEmbedding> JobTerms(Guid ownerId, Guid jobPostingId) =>
         _jobs.Jobs.Where(j => j.Job.Id == jobPostingId && j.Job.OwnerId == ownerId).SelectMany(j => j.Terms);

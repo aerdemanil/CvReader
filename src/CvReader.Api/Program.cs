@@ -1,5 +1,6 @@
 using System.Net;
 using CvReader.Api.Auth;
+using CvReader.Api.Background;
 using CvReader.Api.Security;
 using CvReader.Application;
 using CvReader.Application.Abstractions;
@@ -68,6 +69,7 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<CvFieldExtractionWorker>();
 
 var app = builder.Build();
 

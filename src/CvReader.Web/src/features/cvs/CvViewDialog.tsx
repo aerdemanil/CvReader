@@ -8,14 +8,14 @@ import { Spinner } from '../../components/Spinner'
 import { formatDate } from '../../utils/format'
 
 interface CvViewDialogProps {
-  cv: Pick<CvSummary, 'id' | 'fileName'> | null
+  cv: Pick<CvSummary, 'id' | 'fileName' | 'fullName'> | null
   onClose: () => void
 }
 
 // PDF'in kendisi saklanmaz; yüklenirken çıkarılan metin gösterilir.
 export function CvViewDialog({ cv, onClose }: CvViewDialogProps) {
   return (
-    <Dialog open={cv !== null} onClose={onClose} title={cv?.fileName ?? ''}>
+    <Dialog open={cv !== null} onClose={onClose} title={cv?.fullName ?? cv?.fileName ?? ''}>
       {cv && <CvText key={cv.id} id={cv.id} />}
     </Dialog>
   )
@@ -43,8 +43,9 @@ function CvText({ id }: { id: string }) {
       {detail && (
         <>
           <p className="muted">
-            {detail.pageCount} sayfa · {formatDate(detail.createdAt)} tarihinde yüklendi
+            {detail.fileName} · {detail.pageCount} sayfa · {formatDate(detail.createdAt)} tarihinde yüklendi
           </p>
+          {(detail.email ?? detail.phone) && <p className="muted">{[detail.email, detail.phone].filter(Boolean).join(' · ')}</p>}
           <pre className="cv-text">{detail.text}</pre>
         </>
       )}

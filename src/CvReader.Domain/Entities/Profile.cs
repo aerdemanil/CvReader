@@ -12,4 +12,12 @@ public class Profile
     public string RawText { get; set; } = string.Empty;
     public int PageCount { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Arka planda CV metninden çıkarılır; bulunamayan alan null kalır.
+    public string? FullName { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+
+    // null: çıkarım henüz yapılmadı.
+    public DateTime? FieldsExtractedAt { get; set; }
 }

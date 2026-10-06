@@ -113,8 +113,8 @@ export function CvLibrary({ refreshKey }: { refreshKey: number }) {
                 value={library.search}
                 onChange={(e) => library.setSearch(e.target.value)}
                 maxLength={100}
-                placeholder="Dosya adında ara"
-                aria-label="Dosya adında ara"
+                placeholder="İsim, e-posta ya da dosya adı ara"
+                aria-label="İsim, e-posta ya da dosya adı ara"
               />
               {currentFolder && (
                 <button type="button" className="button" onClick={() => handleDeleteFolder(currentFolder)}>
@@ -138,7 +138,7 @@ export function CvLibrary({ refreshKey }: { refreshKey: number }) {
               </span>
               <h2>{library.search ? 'Aramayla eşleşen CV yok' : 'Burada henüz CV yok'}</h2>
               <p className="muted">
-                {library.search ? 'Farklı bir dosya adı deneyin.' : 'Üstteki “CV yükle” düğmesiyle PDF ekleyebilir, yüklerken klasör seçebilirsiniz.'}
+                {library.search ? 'Farklı bir isim, e-posta ya da dosya adı deneyin.' : 'Üstteki “CV yükle” düğmesiyle PDF ekleyebilir, yüklerken klasör seçebilirsiniz.'}
               </p>
             </div>
           ) : (
@@ -170,31 +170,38 @@ export function CvLibrary({ refreshKey }: { refreshKey: number }) {
               </div>
 
               <ul className="cv-rows">
-                {cvs.map((cv) => (
-                  <li key={cv.id} className="cv-row">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(cv.id)}
-                      onChange={() => toggle(cv.id)}
-                      aria-label={`${cv.fileName} dosyasını seç`}
-                    />
-                    <button type="button" className="link-button" onClick={() => setViewing(cv)} title="CV metnini görüntüle">
-                      {cv.fileName}
-                    </button>
-                    <span className="cv-folder">{cv.folderId && <span className="chip">{folderNames.get(cv.folderId)}</span>}</span>
-                    <span className="file-note">{cv.pageCount} sayfa</span>
-                    <span className="file-note">{formatDate(cv.createdAt)}</span>
-                    <button
-                      type="button"
-                      className="icon-button icon-button-danger"
-                      aria-label={`${cv.fileName} CV’sini sil`}
-                      title="CV’yi sil"
-                      onClick={() => handleDelete([cv.id], `“${cv.fileName}”`)}
-                    >
-                      <Icon name="trash" size={16} />
-                    </button>
-                  </li>
-                ))}
+                {cvs.map((cv) => {
+                  // Aday adı henüz çıkarılmadıysa ya da bulunamadıysa dosya adı gösterilir.
+                  const name = cv.fullName ?? cv.fileName
+                  return (
+                    <li key={cv.id} className="cv-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(cv.id)}
+                        onChange={() => toggle(cv.id)}
+                        aria-label={`${name} CV’sini seç`}
+                      />
+                      <button type="button" className="link-button" onClick={() => setViewing(cv)} title="CV metnini görüntüle">
+                        {name}
+                      </button>
+                      <span className="file-note cv-contact" title={cv.phone ?? undefined}>
+                        {cv.email ?? cv.phone}
+                      </span>
+                      <span className="cv-folder">{cv.folderId && <span className="chip">{folderNames.get(cv.folderId)}</span>}</span>
+                      <span className="file-note">{cv.pageCount} sayfa</span>
+                      <span className="file-note">{formatDate(cv.createdAt)}</span>
+                      <button
+                        type="button"
+                        className="icon-button icon-button-danger"
+                        aria-label={`${name} CV’sini sil`}
+                        title="CV’yi sil"
+                        onClick={() => handleDelete([cv.id], `“${name}”`)}
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
 
               {library.hasMore && (

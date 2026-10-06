@@ -3,7 +3,8 @@ using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Matching;
 
-public record MatchResultDto(Guid ProfileId, string FileName, double Score);
+// FullName: CV'den çıkarılan aday adı; çıkarım bitene kadar ya da bulunamazsa null'dır.
+public record MatchResultDto(Guid ProfileId, string FileName, string? FullName, double Score);
 
 public record MatchPageDto(int Total, List<MatchResultDto> Items);
 
@@ -11,7 +12,7 @@ public record TermMatchDto(string Term, double Score);
 
 public record KeywordMatchDto(string Keyword, double Score, List<TermMatchDto> Terms);
 
-public record MatchDetailDto(Guid ProfileId, string FileName, double Score, List<KeywordMatchDto> Keywords);
+public record MatchDetailDto(Guid ProfileId, string FileName, string? FullName, double Score, List<KeywordMatchDto> Keywords);
 
 public class MatchingService
 {
@@ -36,10 +37,11 @@ public class MatchingService
         var similarities = await _profiles.GetBestSimilaritiesAsync(ownerId, jobPostingId, ct);
 
         var ranked = similarities
-            .GroupBy(s => (s.ProfileId, s.FileName))
+            .GroupBy(s => (s.ProfileId, s.FileName, s.FullName))
             .Select(g => new MatchResultDto(
                 g.Key.ProfileId,
                 g.Key.FileName,
+                g.Key.FullName,
                 TotalScore(KeywordScores(job, g.ToDictionary(s => s.JobTerm, s => s.Similarity)))))
             .OrderByDescending(r => r.Score)
             .ThenBy(r => r.ProfileId) // eşit skorlarda sayfalar arası sıra sabit kalsın
@@ -86,7 +88,7 @@ public class MatchingService
             })
             .ToList();
 
-        return new MatchDetailDto(profile.Id, profile.FileName, TotalScore(scores), keywords);
+        return new MatchDetailDto(profile.Id, profile.FileName, profile.FullName, TotalScore(scores), keywords);
     }
 
     // Anahtar kelimenin skoru, terimlerinin skorlarının ortalamasıdır: "sql server" için CV'de hem "sql" hem "server" aranır.
