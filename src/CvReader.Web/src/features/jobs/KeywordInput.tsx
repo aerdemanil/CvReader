@@ -7,10 +7,13 @@ export const MAX_KEYWORD_LENGTH = 100
 interface KeywordInputProps {
   value: string[]
   onChange: (keywords: string[]) => void
+  required: string[]
+  onRequiredChange: (required: string[]) => void
 }
 
 // Enter veya virgül ile anahtar kelime ekler; Backspace boş alanda son kelimeyi siler.
-export function KeywordInput({ value, onChange }: KeywordInputProps) {
+// Kelimeye tıklamak onu zorunlu yapar ya da zorunluluğunu kaldırır.
+export function KeywordInput({ value, onChange, required, onRequiredChange }: KeywordInputProps) {
   const [draft, setDraft] = useState('')
 
   function add(raw: string) {
@@ -28,12 +31,21 @@ export function KeywordInput({ value, onChange }: KeywordInputProps) {
     setDraft('')
   }
 
+  function remove(keyword: string) {
+    onChange(value.filter((k) => k !== keyword))
+    onRequiredChange(required.filter((k) => k !== keyword))
+  }
+
+  function toggleRequired(keyword: string) {
+    onRequiredChange(required.includes(keyword) ? required.filter((k) => k !== keyword) : [...required, keyword])
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter' || event.key === ',') {
       event.preventDefault()
       add(draft)
     } else if (event.key === 'Backspace' && draft === '' && value.length > 0) {
-      onChange(value.slice(0, -1))
+      remove(value[value.length - 1])
     }
   }
 
@@ -47,18 +59,25 @@ export function KeywordInput({ value, onChange }: KeywordInputProps) {
 
   return (
     <div className="keyword-input">
-      {value.map((keyword) => (
-        <span key={keyword} className="chip">
-          {keyword}
-          <button
-            type="button"
-            aria-label={`${keyword} kelimesini kaldır`}
-            onClick={() => onChange(value.filter((k) => k !== keyword))}
-          >
-            <Icon name="close" size={12} />
-          </button>
-        </span>
-      ))}
+      {value.map((keyword) => {
+        const isRequired = required.includes(keyword)
+        return (
+          <span key={keyword} className={`chip${isRequired ? ' is-required' : ''}`}>
+            <button
+              type="button"
+              className="chip-toggle"
+              aria-pressed={isRequired}
+              title={isRequired ? 'Zorunlu · tercih edilen yapmak için tıklayın' : 'Zorunlu yapmak için tıklayın'}
+              onClick={() => toggleRequired(keyword)}
+            >
+              {keyword}
+            </button>
+            <button type="button" aria-label={`${keyword} kelimesini kaldır`} onClick={() => remove(keyword)}>
+              <Icon name="close" size={12} />
+            </button>
+          </span>
+        )
+      })}
       <input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

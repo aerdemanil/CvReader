@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
         {
             entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Keywords).HasColumnType("varchar(100)[]");
+            entity.Property(j => j.RequiredKeywords).HasColumnType("varchar(100)[]");
 
             entity.HasOne<User>()
                 .WithMany()

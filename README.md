@@ -65,11 +65,39 @@ bu yüzden build alınmadan API'nin kök adresi (http://localhost:5130) 404 dön
 
 Tek adresten sunmak için `src/CvReader.Web` içinde `npm run build` çalıştırın; API çıktıyı kök adreste sunar.
 
+## Skorlama
+
+- CV metni kelimelere ve art arda gelen en çok üç kelimelik ifadelere bölünür; her biri ayrı bir vektördür.
+  Anahtar kelime bütün olarak aranır: "SQL Server" için CV'de "sql server" ifadesi gerekir.
+- Anahtar kelimenin kendisi CV'de geçiyorsa puanı 100'dür; yalnızca yakın anlamlısı geçiyorsa benzerliğe göre en çok 80.
+  `csharp`/`c#` gibi yazım farkları aynı terim sayılır.
+- CV'nin skoru anahtar kelime puanlarının ortalamasıdır. Zorunlu işaretlenen anahtar kelimeler iki kat ağırlıklıdır;
+  biri CV'de hiç bulunmazsa skor 50'yi geçemez.
+
+Terim kuralı değiştiğinde önceden yüklenmiş CV'ler ve ilanlar eski terimleriyle kalır; yeniden yüklenmeleri gerekir.
+
 ## Testler
 
 ```bash
 dotnet test
 cd src/CvReader.Web && npm run lint && npm run build
+```
+
+Skorlamanın gerçek CV'leri ne kadar doğru sıraladığını ölçen test, etiket dosyası verilmedikçe atlanır.
+Dosya kişisel veri içerdiği için deponun dışında tutulur:
+
+```json
+{
+  "ownerEmail": "kullanici@ornek.com",
+  "jobs": [{ "title": "Backend Developer", "labels": { "ali.pdf": 2, "ayse.pdf": 1, "mehmet.pdf": 0 } }]
+}
+```
+
+Etiketler: 0 uygun değil, 1 kısmen, 2 uygun. Test geliştirme veritabanındaki ilanı başlığından, CV'leri dosya adından bulur.
+
+```powershell
+$env:CVREADER_EVAL_LABELS = "C:\yol\labels.json"
+dotnet test --filter "FullyQualifiedName~ScoringEvaluation" --logger "console;verbosity=detailed"
 ```
 
 ## Yapılandırma

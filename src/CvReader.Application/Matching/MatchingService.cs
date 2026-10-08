@@ -10,13 +10,19 @@ public record MatchPageDto(int Total, List<MatchResultDto> Items);
 
 public record TermMatchDto(string Term, double Score);
 
-public record KeywordMatchDto(string Keyword, double Score, List<TermMatchDto> Terms);
+public record KeywordMatchDto(string Keyword, bool Required, double Score, List<TermMatchDto> Terms);
 
 public record MatchDetailDto(Guid ProfileId, string FileName, string? FullName, double Score, List<KeywordMatchDto> Keywords);
 
 public class MatchingService
 {
     private const int MaxTermsPerKeyword = 5;
+
+    // Zorunlu anahtar kelime ortalamaya tercih edilenin iki katı ağırlıkla girer.
+    private const double RequiredWeight = 2;
+
+    // Zorunlu bir anahtar kelimesi hiç bulunmayan CV, diğerleri tam olsa da bu skoru geçemez.
+    private const double MissingRequiredCap = 50;
 
     private readonly IJobPostingRepository _jobs;
     private readonly IProfileRepository _profiles;
@@ -42,7 +48,7 @@ public class MatchingService
                 g.Key.ProfileId,
                 g.Key.FileName,
                 g.Key.FullName,
-                TotalScore(KeywordScores(job, g.ToDictionary(s => s.JobTerm, s => s.Similarity)))))
+                TotalScore(job, KeywordScores(job, g.ToDictionary(s => s.JobTerm, s => s.Similarity)))))
             .OrderByDescending(r => r.Score)
             .ThenBy(r => r.ProfileId) // eşit skorlarda sayfalar arası sıra sabit kalsın
             .ToList();
@@ -84,22 +90,30 @@ public class MatchingService
                     .Take(MaxTermsPerKeyword)
                     .ToList();
 
-                return new KeywordMatchDto(keyword, Math.Round(scores[index], 1), terms);
+                return new KeywordMatchDto(keyword, job.RequiredKeywords.Contains(keyword), Math.Round(scores[index], 1), terms);
             })
             .ToList();
 
-        return new MatchDetailDto(profile.Id, profile.FileName, profile.FullName, TotalScore(scores), keywords);
+        return new MatchDetailDto(profile.Id, profile.FileName, profile.FullName, TotalScore(job, scores), keywords);
     }
 
-    // Anahtar kelimenin skoru, terimlerinin skorlarının ortalamasıdır: "sql server" için CV'de hem "sql" hem "server" aranır.
-    // CV'de yakını bulunmayan terim sözlükte yoktur ve 0 sayılır.
+    // Anahtar kelimenin skoru, terimlerinin skorlarının ortalamasıdır: "sql server" CV'de bütün olarak aranır,
+    // "ci/cd" için hem "ci" hem "cd" aranır. CV'de yakını bulunmayan terim sözlükte yoktur ve 0 sayılır.
     private static List<double> KeywordScores(JobPosting job, Dictionary<string, double> bestSimilarities) =>
         job.Keywords
             .Select(keyword => TermExtractor.ExtractFromKeyword(keyword)
                 .Average(term => SimilarityScorer.ToScore(bestSimilarities.GetValueOrDefault(term))))
             .ToList();
 
-    // CV'nin skoru, anahtar kelime skorlarının ortalamasıdır.
-    private static double TotalScore(List<double> keywordScores) =>
-        Math.Round(keywordScores.Average(), 1);
+    // CV'nin skoru, anahtar kelime skorlarının ağırlıklı ortalamasıdır.
+    private static double TotalScore(JobPosting job, List<double> keywordScores)
+    {
+        var required = job.Keywords.Select(job.RequiredKeywords.Contains).ToList();
+        var weights = required.Select(r => r ? RequiredWeight : 1).ToList();
+
+        var average = keywordScores.Zip(weights, (score, weight) => score * weight).Sum() / weights.Sum();
+        var missingRequired = keywordScores.Zip(required, (score, isRequired) => isRequired && score == 0).Any(missing => missing);
+
+        return Math.Round(missingRequired ? Math.Min(average, MissingRequiredCap) : average, 1);
+    }
 }

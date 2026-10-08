@@ -14,12 +14,15 @@ export interface JobPosting {
   id: string
   title: string
   keywords: string[]
+  // keywords içinden zorunlu sayılanlar.
+  requiredKeywords: string[]
   createdAt: string
 }
 
 export interface CreateJobRequest {
   title: string
   keywords: string[]
+  requiredKeywords: string[]
 }
 
 // fullName: CV'den çıkarılan aday adı; çıkarım bitene kadar ya da bulunamazsa null.
@@ -38,6 +41,7 @@ export interface TermMatch {
 
 export interface KeywordMatch {
   keyword: string
+  required: boolean
   score: number
   terms: TermMatch[]
 }

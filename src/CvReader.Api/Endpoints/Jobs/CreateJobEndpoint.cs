@@ -10,6 +10,9 @@ public class CreateJobRequest
 {
     public string Title { get; set; } = string.Empty;
     public List<string> Keywords { get; set; } = [];
+
+    // Keywords içinden zorunlu sayılanlar.
+    public List<string> RequiredKeywords { get; set; } = [];
 }
 
 public class CreateJobValidator : Validator<CreateJobRequest>
@@ -23,6 +26,9 @@ public class CreateJobValidator : Validator<CreateJobRequest>
             .Must(k => k.Count <= 30)
             .WithMessage("At most 30 keywords are allowed.");
         RuleForEach(x => x.Keywords).MaximumLength(100); // kolon varchar(100)
+        RuleFor(x => x.RequiredKeywords)
+            .Must((req, required) => required is not null && required.Count <= req.Keywords.Count && required.All(req.Keywords.Contains))
+            .WithMessage("Required keywords must be among the keywords.");
     }
 }
 
@@ -46,7 +52,7 @@ public class CreateJobEndpoint : Endpoint<CreateJobRequest, JobPostingDto>
     {
         try
         {
-            var job = await _jobService.CreateAsync(User.GetUserId(), req.Title, req.Keywords, ct);
+            var job = await _jobService.CreateAsync(User.GetUserId(), req.Title, req.Keywords, req.RequiredKeywords, ct);
             await Send.OkAsync(job, ct);
         }
         catch (EmbeddingException ex)

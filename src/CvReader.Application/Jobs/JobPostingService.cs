@@ -5,7 +5,7 @@ using CvReader.Domain.Entities;
 
 namespace CvReader.Application.Jobs;
 
-public record JobPostingDto(Guid Id, string Title, List<string> Keywords, DateTime CreatedAt);
+public record JobPostingDto(Guid Id, string Title, List<string> Keywords, List<string> RequiredKeywords, DateTime CreatedAt);
 
 public class JobPostingService
 {
@@ -18,7 +18,9 @@ public class JobPostingService
         _embeddings = embeddings;
     }
 
-    public async Task<JobPostingDto> CreateAsync(Guid ownerId, string title, IEnumerable<string> keywords, CancellationToken ct)
+    // requiredKeywords içinde olup keywords içinde olmayanlar yok sayılır.
+    public async Task<JobPostingDto> CreateAsync(
+        Guid ownerId, string title, IEnumerable<string> keywords, IEnumerable<string> requiredKeywords, CancellationToken ct)
     {
         var job = new JobPosting
         {
@@ -31,6 +33,9 @@ public class JobPostingService
                 .DistinctBy(Normalize)
                 .ToList()
         };
+
+        var required = requiredKeywords.Select(Normalize).ToHashSet();
+        job.RequiredKeywords = job.Keywords.Where(k => required.Contains(Normalize(k))).ToList();
 
         // Anahtar kelimeler değişmediği için terim vektörleri bir kez alınır ve ilanla birlikte saklanır.
         var terms = job.Keywords.SelectMany(TermExtractor.ExtractFromKeyword).Distinct().ToList();
@@ -57,7 +62,7 @@ public class JobPostingService
         _jobs.DeleteAsync(ownerId, id, ct);
 
     private static JobPostingDto ToDto(JobPosting job) =>
-        new(job.Id, job.Title, job.Keywords, job.CreatedAt);
+        new(job.Id, job.Title, job.Keywords, job.RequiredKeywords, job.CreatedAt);
 
     // "Java", "java " ve "JAVA" aynı anahtar kelime sayılsın; Türkçe İ/ı da katlanır.
     private static string Normalize(string value)

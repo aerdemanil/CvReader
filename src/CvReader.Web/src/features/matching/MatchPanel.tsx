@@ -51,11 +51,14 @@ export function MatchPanel({ job, refreshKey, onDeleteJob }: MatchPanelProps) {
             {formatDate(job.createdAt)} · {job.keywords.length} anahtar kelime
           </p>
           <div className="chips">
-            {job.keywords.map((k) => (
-              <span key={k} className="chip">
-                {k}
-              </span>
-            ))}
+            {job.keywords.map((k) => {
+              const isRequired = job.requiredKeywords.includes(k)
+              return (
+                <span key={k} className={`chip${isRequired ? ' is-required' : ''}`} title={isRequired ? 'Zorunlu' : undefined}>
+                  {k}
+                </span>
+              )
+            })}
           </div>
         </div>
         <div className="panel-actions">

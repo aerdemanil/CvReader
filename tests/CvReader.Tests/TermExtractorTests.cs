@@ -7,7 +7,27 @@ public class TermExtractorTests
     [Fact]
     public void Terms_are_lowercased_and_distinct_in_first_seen_order()
     {
-        Assert.Equal(["java", "developer"], TermExtractor.Extract("Java developer, JAVA Developer."));
+        Assert.Equal(["java", "developer", "java developer"], TermExtractor.Extract("Java developer, JAVA Developer."));
+    }
+
+    [Fact]
+    public void Consecutive_words_also_form_phrases_of_up_to_three_words()
+    {
+        Assert.Equal(
+            ["asp.net", "core", "asp.net core", "web", "core web", "asp.net core web", "api", "web api", "core web api"],
+            TermExtractor.Extract("ASP.NET Core\nWeb API"));
+    }
+
+    [Fact]
+    public void Punctuation_numbers_and_sentence_ends_break_phrases()
+    {
+        Assert.Equal(["java", "sql", "spring", "boot", "spring boot", "docker"], TermExtractor.Extract("Java, SQL. Spring Boot 3 Docker"));
+    }
+
+    [Fact]
+    public void Alternative_spellings_become_one_term()
+    {
+        Assert.Equal(["c#", ".net", "node.js", "sql server"], TermExtractor.Extract("CSharp, dotnet, NodeJS, MSSQL"));
     }
 
     [Fact]
@@ -37,9 +57,21 @@ public class TermExtractorTests
     }
 
     [Fact]
-    public void Keyword_is_split_like_cv_text()
+    public void Keyword_of_several_words_is_one_term()
     {
-        Assert.Equal(["sql", "server"], TermExtractor.ExtractFromKeyword("SQL Server"));
+        Assert.Equal(["sql server"], TermExtractor.ExtractFromKeyword("SQL Server"));
+    }
+
+    [Fact]
+    public void Keyword_is_split_where_cv_text_would_be()
+    {
+        Assert.Equal(["ci", "cd"], TermExtractor.ExtractFromKeyword("CI/CD"));
+    }
+
+    [Fact]
+    public void Keyword_uses_the_same_spelling_as_cv_text()
+    {
+        Assert.Equal(["c#"], TermExtractor.ExtractFromKeyword("CSharp"));
     }
 
     [Fact]

@@ -29,6 +29,7 @@ export function JobFormDialog({ open, onClose, onSubmit, onCreated }: JobFormDia
 function JobForm({ onClose, onSubmit, onCreated }: Omit<JobFormDialogProps, 'open'>) {
   const [title, setTitle] = useState('')
   const [keywords, setKeywords] = useState<string[]>([])
+  const [requiredKeywords, setRequiredKeywords] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,7 +43,7 @@ function JobForm({ onClose, onSubmit, onCreated }: Omit<JobFormDialogProps, 'ope
     setSubmitting(true)
     setError(null)
     try {
-      onCreated(await onSubmit({ title: title.trim(), keywords }))
+      onCreated(await onSubmit({ title: title.trim(), keywords, requiredKeywords }))
     } catch (err) {
       setError(errorMessage(err))
       setSubmitting(false)
@@ -65,9 +66,14 @@ function JobForm({ onClose, onSubmit, onCreated }: Omit<JobFormDialogProps, 'ope
         </label>
         <div className="field">
           <span>Anahtar kelimeler</span>
-          <KeywordInput value={keywords} onChange={setKeywords} />
+          <KeywordInput
+            value={keywords}
+            onChange={setKeywords}
+            required={requiredKeywords}
+            onRequiredChange={setRequiredKeywords}
+          />
           <small className="muted">
-            Enter veya virgül ile ekleyin · {keywords.length}/{MAX_KEYWORDS}
+            Enter veya virgül ile ekleyin · zorunlu yapmak için kelimeye tıklayın · {keywords.length}/{MAX_KEYWORDS}
           </small>
         </div>
         {error && <Alert tone="error">{error}</Alert>}

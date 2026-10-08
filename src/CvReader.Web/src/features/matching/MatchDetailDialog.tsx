@@ -52,7 +52,10 @@ function KeywordMatches({ jobId, profileId }: { jobId: string; profileId: string
             {detail.keywords.map((k) => (
               <li key={k.keyword}>
                 <div className="match-keyword">
-                  <strong>{k.keyword}</strong>
+                  <strong>
+                    {k.keyword}
+                    {k.required && <span className="muted"> · zorunlu</span>}
+                  </strong>
                   <span className="chart-value">{formatScore(k.score)}</span>
                 </div>
                 {k.terms.length > 0 ? (
@@ -70,8 +73,9 @@ function KeywordMatches({ jobId, profileId }: { jobId: string; profileId: string
             ))}
           </ul>
           <p className="muted match-note">
-            Her anahtar kelime, CV’de ona anlamca en yakın kelimeye göre 0–100 arası puanlanır; CV’nin skoru bu puanların
-            ortalamasıdır.
+            Her anahtar kelime, CV’de ona en yakın kelime ya da ifadeye göre puanlanır: kendisi geçiyorsa 100, yalnızca
+            yakın anlamlısı geçiyorsa en çok 80. CV’nin skoru bu puanların ortalamasıdır; zorunlu anahtar kelimeler iki
+            kat ağırlıklıdır ve biri hiç bulunmazsa skor 50’yi geçemez.
           </p>
         </>
       )}

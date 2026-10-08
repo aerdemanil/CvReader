@@ -38,8 +38,8 @@ public class CvUploadServiceTests
     {
         await _service.UploadAsync(Owner, null, "ada.pdf", File("cv-1"), CancellationToken.None);
 
-        Assert.Equal(["parsed", "text"], Assert.Single(_embeddings.Inputs));
-        Assert.Equal(["parsed", "text"], Assert.Single(_profiles.Profiles).Terms.Select(t => t.Term));
+        Assert.Equal(["parsed", "text", "parsed text"], Assert.Single(_embeddings.Inputs));
+        Assert.Equal(["parsed", "text", "parsed text"], Assert.Single(_profiles.Profiles).Terms.Select(t => t.Term));
     }
 
     [Fact]
